@@ -29,8 +29,8 @@ setup(
        # the name must match the folder name 'verysimplemodule'
         name=NAME, 
         version=VERSION,
-        author="Jason Dsouza",
-        author_email="<youremail@email.com>",
+        author="Eleonora Castelli, John Baker, Quentin Baghi",
+        author_email="<eleonora.castelli@nasa.gov>, <john.g.baker@nasa.gov>, <quentin.baghi@protonmail.com>",
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         long_description_content_type='text/markdown',
@@ -40,14 +40,11 @@ setup(
         # python_requires='>=3.5',
         install_requires=['numpy', 'xarray', 'scipy', 'sympy', 
         'pyfftw', 'h5py', 'scikit-learn'],
-        install_requires=[], # add any additional packages that 
         # needs to be installed along with your package. Eg: 'caer'
 
-        keywords=['python', 'first package'],
         classifiers= [
             "Development Status :: 3 - Alpha",
-            "Intended Audience :: Education",
-            "Programming Language :: Python :: 2",
+            "Intended Audience :: Developers",
             "Programming Language :: Python :: 3",
         ]
 )
