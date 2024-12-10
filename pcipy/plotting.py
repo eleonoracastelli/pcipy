@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Dec 10 15:40:27 2024
+
+@author: J Baker
+"""
+
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 
@@ -6,6 +14,43 @@ def plotconfig(lbsize=20, lgsize=18, autolayout=True, figsize=[8, 6],
                ticklabelsize=16, style='classic', fsize=None,
                tdir=None, major=None, minor=None, lwidth=None, lhandle=None,
                fontfamily=None):
+    '''
+    Plotting configuration function.
+    
+    Parameters
+    ----------
+    lbsize : TYPE, optional
+        DESCRIPTION. The default is 20.
+    lgsize : TYPE, optional
+        DESCRIPTION. The default is 18.
+    autolayout : TYPE, optional
+        DESCRIPTION. The default is True.
+    figsize : TYPE, optional
+        DESCRIPTION. The default is [8, 6].
+    ticklabelsize : TYPE, optional
+        DESCRIPTION. The default is 16.
+    style : TYPE, optional
+        DESCRIPTION. The default is 'classic'.
+    fsize : TYPE, optional
+        DESCRIPTION. The default is None.
+    tdir : TYPE, optional
+        DESCRIPTION. The default is None.
+    major : TYPE, optional
+        DESCRIPTION. The default is None.
+    minor : TYPE, optional
+        DESCRIPTION. The default is None.
+    lwidth : TYPE, optional
+        DESCRIPTION. The default is None.
+    lhandle : TYPE, optional
+        DESCRIPTION. The default is None.
+    fontfamily : TYPE, optional
+        DESCRIPTION. The default is None.
+
+    Returns
+    -------
+    None.
+
+    '''
 
     plt.style.use('default')
     if style == 'classic':
@@ -115,13 +160,14 @@ def plotconfig(lbsize=20, lgsize=18, autolayout=True, figsize=[8, 6],
         plt.rcParams['xtick.minor.top'] = True
         plt.rcParams['ytick.major.right'] = True
         plt.rcParams['ytick.minor.right'] = True
+        
 
 def comparison_plot(x_list, matrix_list,
                     labels=['Initial', 'Estimated', 'True', 'Eigenvalues'],
                     colors=['gray', 'blue', 'black', 'green'],
                     linewidths=[2, 2, 2, 2],
                     linestyles=['solid', 'solid', 'solid', 'solid'],
-                    xscale='log', 
+                    xscale='log',
                     yscale='log',
                     xlabel="Frequency [Hz]",
                     ylabels=["PSD 1", "PSD 2", "PSD 3"],
@@ -138,26 +184,51 @@ def comparison_plot(x_list, matrix_list,
                     bbox_to_anchor=(0, 1.03, 1, 0.3),
                     rasterized=False,
                     ncol=None):
+    '''
+    Comparison plot settings.
+    
+    Parameters
+    ----------
+    x_list :
+        
+    matrix_list :
+        
+
+    figsize : TYPE, optional
+        DESCRIPTION. The default is [8, 6].
+    lbsize : TYPE, optional
+        DESCRIPTION. The default is 17.
+    lgsize : TYPE, optional
+        DESCRIPTION. The default is 13.
+    linewidth : TYPE, optional
+        DESCRIPTION. The default is None.
+    
+    Returns
+    -------
+    fig
+    
+    ax
+    '''
 
     n_channels = matrix_list[0].shape[1]
 
     plotconfig(lbsize=lbsize, lgsize=lgsize, autolayout=True, figsize=figsize)
     # Frequency plot
-    fig1, ax1 = plt.subplots(nrows=n_channels, sharex=sharex, sharey=sharey)
+    fig, ax = plt.subplots(nrows=n_channels, sharex=sharex, sharey=sharey)
     for i in range(n_channels):
-        [ax1[i].plot(x_list[j], matrix_list[j][:, i],
+        [ax[i].plot(x_list[j], matrix_list[j][:, i],
                      colors[j], label=labels[j],
                      linewidth=linewidths[j],
                      linestyle=linestyles[j],
                      rasterized=rasterized)
          for j in range(len(matrix_list))]
-        ax1[i].set_xscale(xscale)
-        ax1[i].set_yscale(yscale)
-        ax1[i].set_ylabel(ylabels[i], fontsize=lbsize)
-        ax1[i].set_xlim(left=left, right=right)
-        ax1[i].set_ylim(bottom=bottom, top=top)
-        ax1[i].set_title(titles[i])
-        ax1[i].minorticks_on()
+        ax[i].set_xscale(xscale)
+        ax[i].set_yscale(yscale)
+        ax[i].set_ylabel(ylabels[i], fontsize=lbsize)
+        ax[i].set_xlim(left=left, right=right)
+        ax[i].set_ylim(bottom=bottom, top=top)
+        ax[i].set_title(titles[i])
+        ax[i].minorticks_on()
         if i == 0:
             if ncol is None:
                 # Number of columns should not be larger than 3
@@ -166,14 +237,14 @@ def comparison_plot(x_list, matrix_list,
                 else:
                     ncol = 3
             # Locating legend (x, y, width, height) from bottom left corner
-            ax1[i].legend(bbox_to_anchor=bbox_to_anchor,
+            ax[i].legend(bbox_to_anchor=bbox_to_anchor,
                           loc="lower left",
                           mode='expand',
                           shadow=False,
                           ncol=ncol,
                           fontsize=lgsize, frameon=frameon)
-    ax1[n_channels-1].set_xlabel(xlabel, fontsize=lbsize)
+    ax[n_channels-1].set_xlabel(xlabel, fontsize=lbsize)
     if tight:
         plt.tight_layout()
     # plt.show()
-    return fig1, ax1
+    return fig, ax
