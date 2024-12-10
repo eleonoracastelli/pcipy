@@ -3,7 +3,7 @@
 """
 Created on Thu Dec  5 12:35:47 2024
 
-@author: E Castelli, building on Q Baghi's setup.py file for pylisa
+@author: E Castelli, J Baker, building on Q Baghi's setup.py file for pylisa
 """
 
 from setuptools import setup, find_packages
