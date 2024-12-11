@@ -9,7 +9,7 @@ Created on Wed Dec 11 14:18:38 2024
 import numpy as np
 from scipy import interpolate
 
-def estimatePSD(f, fmax, dt, axs = None):
+def estimatePSD(data, dt, Nmax, fmax, axs = None):
 
     # Switching to minimally correlated frequencies seleciton algorithm from LPF
     # # Number of interior knots
@@ -19,15 +19,12 @@ def estimatePSD(f, fmax, dt, axs = None):
     # # # Frequencies
     # # logf_knots = np.linspace(np.log(fmin), np.log(fmax), n_coeffs) # check knots location
 
-    # Switching to minimally correlated frequencies seleciton algorithm from LPF
-    min_noise_stretch_len = 7 * 24 * 3600 # 7 days minimum duration for noise estimation
-    logf_knots = np.log(choosefreqs(Nmax=min_noise_stretch_len/dt,fmax=fmax,fs=1/dt)[1])
+    # Switching to minimally correlated frequencies selection algorithm from LPF
+    logf_knots = np.log(choosefreqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
     n_coeffs = len(logf_knots)
     # redefine fmin, fmax, ip
     fmin = np.exp(logf_knots[0])
     fmax = np.exp(logf_knots[-1])
-    # Band restriction
-    ip = np.where((f>=fmin) & (f <= fmax))[0]    
     # skip padding
     skip = 21000   
     # interp kwargs
@@ -40,15 +37,16 @@ def estimatePSD(f, fmax, dt, axs = None):
     # basis function
     basis_func = interpolate.interp1d(logf_knots, np.eye(n_coeffs), **kwargs)
     
+    # set up window mask
     wd = masking.modified_hann(ub-skip-lb-skip, n_wind=n_wind)
     # apply windowing
     k2 = np.sum(wd**2)
     #create frequency array for the FT of the noise stretch
-    fn = np.fft.fftfreq(data[comb].shape[0]) / dt
+    f = np.fft.fftfreq(data.shape[0]) / dt
     # only select chosen frequencies
-    ipn = np.where((fn>=fmin) & (fn <= fmax))[0]
+    ip = np.where((f>=fmin) & (f <= fmax))[0]
     # create array of noise stretch dft for each TDI combination
-    n_dft = [np.fft.fft(data[comb] * wd, data[comb].shape[0]) * np.sqrt(2 * dt / k2) for comb in channels]
+    n_dft = np.fft.fft(data * wd, data.shape[0]) * np.sqrt(2 * dt / k2)
     
     # define design matrix from basis function
     design_matrix = basis_func(np.log(f[ip])).T
@@ -60,7 +58,7 @@ def estimatePSD(f, fmax, dt, axs = None):
     noisecoeffs = [np.dot(projector, log_per[:, j]) for j in range(3)]
     # plot noise stretches and interpolated coefficients
     if axs is not None:
-        logf_knots = np.log(choosefreqs(Nmax=stretchlen/dt,fmax=fmax,fs=1/dt)[1])
+        logf_knots = np.log(choosefreqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
         axs.T[len(noisecoeffs)-1][0].set_title("Noise stretch {n}".format(n = len(noisecoeffs)))
         for tdi, ax in enumerate(axs.T[len(noisecoeffs)-1]):
             ax.loglog(f[ip], np.abs(n_dft[tdi][ip])**2, zorder=0, alpha = 0.7)
@@ -68,7 +66,6 @@ def estimatePSD(f, fmax, dt, axs = None):
             ax.set_ylabel("PSD")
         ax.set_xlabel("Frequency [Hz]")
     
-    print("* Noise stretch # {n}: duration {d:.1f} days".format(n=len(noisecoeffs), d=d/86400))
     # average interpolated coefficients
     coeffs = np.average(np.asarray(noisecoeffs), axis = 0)
     # interpolate log f knots
@@ -77,13 +74,6 @@ def estimatePSD(f, fmax, dt, axs = None):
     def s_function(freqs, **kwargs):
         s_list = [np.exp(func(np.log(freqs))) for func in log_psd_func]
         return s_list
-
-
-def interp_noise_stretch(n_dft, f, ip, basis_func, noisecoeffs, axs = None, **kwargs):#logf_knots = logf_knots, channels = channels):
-    """
-    Interpolate noise stretch periodograms.
-    """
-
 
     return noisecoeffs
 
@@ -108,7 +98,6 @@ def choosefreqs(Nmax:int,fmax:float,fs:float):
         Number of averaging periodograms
     ndarray
         Frequency array.
-
     '''
 
     M = 4
@@ -182,15 +171,17 @@ def bh_lowpass(data,t_win=100,t_sam=5,fs=10):
 
 def bh92(M:int):
     '''
+    Mathematical expression of a Blackman-Harris window.
+    
     Parameters
     ----------
     M : int
-        DESCRIPTION.
+        Length of BH window.
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    ndarray
+        Array of values for the BH window of desired length.
 
     '''
     z = np.arange(0,M)*2*np.pi/M
