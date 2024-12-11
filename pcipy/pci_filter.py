@@ -15,17 +15,36 @@ class apci_data():
     
     '''
     def __init__(self, ydata, fs, nhalf=45, order=1, maxcompts=10, t0=None, dt=None):
-        '''
-        Initialize args:
-          required:
-             ydata:   ndarray  matrix with the single link LISA temporal phase data streams
-             fs:      float    sampling rate (Hz)
-          optional:
-             nhalf:      int      filter stencil halfwidth (def: 45)
-             maxcompts:  int      pca results will be truncated to this length after initial processing (def: 10)
-             t0:         float    zero-time (relative to start of data to use in stencil definition (def: center of data; Note set t0=0 for default of 2023-24)
-             dt:         float    timestep size to use for scaling (ie weighting) the higher-order data matrix sectors (def:1/ns)
-                                              
+        '''                                   
+        Parameters
+        ----------
+        ydata : ndarray
+            Matrix with the single link LISA temporal phase data streams.
+        fs : float
+            Sampling rate (Hz).
+        nhalf : int, optional
+            Filter stencil halfwidth. The default is 45.
+        order : TYPE, optional
+            DESCRIPTION. The default is 1.
+        maxcompts : int, optional
+            PCA results will be truncated to this length after initial processing.. The default is 10.
+        t0 : float, optional
+            Zero-time (relative to start of data to use in stencil definition (def: center of data; Note set t0=0 for default of 2023-24). The default is None.
+        dt : float, optional
+            Timestep size to use for scaling (ie weighting) the higher-order data matrix sectors (def:1/ns). The default is None.
+
+        Returns
+        -------
+        None.
+        
+        
+        The input channels are stretches of data, usually of length ns+2*nhalf, but sometimes varying. The variations are:
+          : (full length of matrix)
+          0:ns_fixed
+          0:ns+2*nhalf
+          skip:skip+ns+2*nhalf
+        In every case the window is trivial np.ones([data lenght])  
+
         '''
         
         # Data sample size
@@ -67,22 +86,12 @@ class apci_data():
         print('channel variances:',np.flip(self.explained_variance[-(maxcompts+1):]))
     
         
-
-        
-    '''  
-    The input channels are stretches of data, usually of length ns+2*nhalf, but sometimes varying. The variations are:
-      : (full length of matrix)
-      0:ns_fixed
-      0:ns+2*nhalf
-      skip:skip+ns+2*nhalf
-    In every case the window is trivial np.ones([data lenght])  
-    '''
     def t_of_i(self,i):
         return -self.t0 + self.dt*i
             
     def build_data_matrix(self, ys):
         """
-        Pre-process data to build a matrix of features of size n_features x n_data
+        Pre-process data to build a matrix of features of size n_features x n_data.
 
         Parameters
         ----------
@@ -99,8 +108,6 @@ class apci_data():
             data matrix of size n_data x (2*nhalf+1)*nc
 
         Comment: Versions of this func had a "window" option used in periodograms, but this seems not to have been used in any PCI 2.0 notebooks so we leave it out here
-        
-
         """ 
     
         ###Plan to generalize to work with a sub-stretch of the data???
@@ -129,7 +136,6 @@ class apci_data():
     
     def construct_shifted_series(self, p, ishift, window=1.0):
         """
-
         Parameters
         ----------
         p : ndarray
@@ -152,13 +158,22 @@ class apci_data():
 
     def stencil_at_timestep(self,it=None, n_channels=None):
         '''
-        Evaluate the effective time-dependent PCI[0] stencil for time step 'it'
-        
-        it          the time index (relative to the PCI-generating data)  [default data central time]
-        n_channels  number of channel stencils to compute 
-        
+        Evaluate the effective time-dependent PCI[0] stencil for time step 'it'.         
         For higher-order aPCI the effective filter stencil is time-dependent.  If a representative 'constant'
-        stencil is needed, one can use the stencil as evaluated at a particular
+                stencil is needed, one can use the stencil as evaluated at a particular
+
+        Parameters
+        ----------
+        it : TYPE, optional
+            the time index (relative to the PCI-generating data)  [default data central time]. The default is None.
+        n_channels : TYPE, optional
+            number of channel stencils to compute . The default is None.
+
+        Returns
+        -------
+        v : TYPE
+            DESCRIPTION.
+
         '''
         
         if it is None: it = self.ns//2
@@ -179,10 +194,21 @@ class apci_data():
     def apply_for_channels(self,ydata, n_channels=None):
         '''
         Apply the precomputed data filters to derive PCI results from distinct data
-        
-        ydata: the new data 
-        ncomponents: the number of PCI component channels to compute
+
+        Parameters
+        ----------
+        ydata : TYPE
+            The new data.
+        n_channels : TYPE, optional
+            The number of PCI component channels to compute. The default is None.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
         '''
+
         datamatrix = self.build_data_matrix(ydata)
         if n_channels is None: n_channels=self.maxcompt
         return self.components[-n_channels:].dot(datamatrix.T).astype(np.float64)
@@ -198,8 +224,23 @@ class apci_data():
         where T is the diagonal time-matrix used in the data matrix construction and 
         V_{ab} is the submatrix of V corresponging to channel a and time-order b
         
-        ydata: the new data 
-        ncomponents: the number of PCI component channels to compute
+        Parameters
+        ----------
+        ydata : TYPE
+            The new data.
+        n_channels : TYPE, optional
+            The number of PCI component channels to compute. The default is None.
+
+        Returns
+        -------
+        list
+            DESCRIPTION.
+            
+        
+        PCA is always invoked as:
+        pca = PCA().fit(datamatrix)
+        in some form.  Note that this does not result in some kind of data normalization by default.
+
         '''
         
         #Undo the X-> H datamatrix stacking:
@@ -215,16 +256,25 @@ class apci_data():
         return [orderedcomps[:,m].dot(unstacked[:,m,:].T).astype(np.float64) for m in range(self.order+1)]
         
 
-    '''
-    PCA is always invoked as:
-    pca = PCA().fit(datamatrix)
-    in some form.  Note that this does not result in some kind of data normalization by default.
-    '''
-    from sklearn.decomposition import PCA
+    
+
     def apply_pca(self, datamatrix,maxcomponents):
         '''
         Apply principal component analysis to the data matrix and extract relevant results explained_variance and (some) components
+
+        Parameters
+        ----------
+        datamatrix : TYPE
+            DESCRIPTION.
+        maxcomponents : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
         '''
+
         print(datamatrix.shape)
         #We set svd_solver='full' here for consistency, but the default 'auto' may be fine for most purposes
         #A minor issue with auto is that, under some conditions an approximation was used which caused the
@@ -239,7 +289,19 @@ class apci_data():
     def apply_svd(self, datamatrix,maxcomponents):  ##should be equivalent, untested
         '''
         Apply principal component analysis to the data matrix and extract relevant results explained_variance and (some) components
+        
+         Parameters
+         ----------
+         datamatrix : TYPE
+             DESCRIPTION.
+         maxcomponents : TYPE
+             DESCRIPTION.
+
+         Returns
+         -------
+         None.
         '''
+        
         print(datamatrix.shape)
         U, S, Vt = svd(datamatrix, full_matrices=True)
         self.explained_variance=self.explained_variance_=S**2/(len(datamatrix)-1)
@@ -266,30 +328,40 @@ class apci_data():
 
 
 #outside class for development; expect to be moved in     
-def covariance_by_link_psd_model(pci,freqs,s_n,n_components=None):
-    '''
-    Apply a model of the secondary noise PSD to get stantionary FD covariance matrix for the data channels
+# def covariance_by_link_psd_model(pci,freqs,s_n,n_components=None):
+#     '''
+#     Apply a model of the secondary noise PSD to get stantionary FD covariance matrix for the data channels
 
-      freqs - an freq grid array
-      s_n   - a corresponding array of PSD values corresponding to link PSDs of secondary noises, all links the same
+#     Parameters
+#     ----------
+#     pci : TYPE
+#         DESCRIPTION.
+#     freqs : TYPE
+#         an freq grid array.
+#     s_n : TYPE
+#         a corresponding array of PSD values corresponding to link PSDs of secondary noises, all links the same.
+#     n_components : TYPE, optional
+#         DESCRIPTION. The default is None.
 
-    returns:
-      cov 
-    '''
+#     Returns
+#     -------
+#     cov.
+#     '''
 
-    if n_components is None: n_components = pci.maxcompt
 
-    # Compute 1st order PCI secondary noises PSD from 00 covariance component
-    n_mat = np.array([np.eye(self.nc) for freq in freqs_a])
-    v_pci_const_mat = pci.stencil_at_timestep(pci.ns//2,n_components)
+#     if n_components is None: n_components = pci.maxcompt
 
-    # Compute PCI equivalent vector for the noise
-    e_vect = [apci.compute_equivalent_vector(freqs_a, n_mat, v_pci_const_mat, nhalf, i, fs=fs) for i in range(n_components)]
+#     # Compute 1st order PCI secondary noises PSD from 00 covariance component
+#     n_mat = np.array([np.eye(self.nc) for freq in freqs_a])
+#     v_pci_const_mat = pci.stencil_at_timestep(pci.ns//2,n_components)
 
-    # Compute secondary noise PCI covarinace
-    cov = sum([eigen.multiple_dot(e[:, :, np.newaxis], np.conj(e[:, np.newaxis, :]))
-                                     for e in e_vect])
+#     # Compute PCI equivalent vector for the noise
+#     e_vect = [apci.compute_equivalent_vector(freqs_a, n_mat, v_pci_const_mat, nhalf, i, fs=fs) for i in range(n_components)]
 
-    cov *= s_n[:, np.newaxis, np.newaxis]  ##Note that we assume equality for link PSDs  ##FIXME
+#     # Compute secondary noise PCI covarinace
+#     cov = sum([eigen.multiple_dot(e[:, :, np.newaxis], np.conj(e[:, np.newaxis, :]))
+#                                      for e in e_vect])
+
+#     cov *= s_n[:, np.newaxis, np.newaxis]  ##Note that we assume equality for link PSDs  ##FIXME
     
-
+#     return cov
