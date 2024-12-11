@@ -7,12 +7,49 @@ Created on Wed Dec 11 14:18:38 2024
 """
 
 import numpy as np
+from scipy import interpolate
 
+def estimatePSD(f, fmax, dt, axs = None):
 
-def interp_noise_stretch(n_dft, f, ip, basis_func, noisecoeffs, axs = None, **kwargs):#logf_knots = logf_knots, channels = channels):
-    """
-    Interpolate noise stretch periodograms.
-    """
+    # Switching to minimally correlated frequencies seleciton algorithm from LPF
+    # # Number of interior knots
+    # # n_knots = 12 # check number of knots
+    # # # Total number of knots
+    # # n_coeffs = n_knots + 2
+    # # # Frequencies
+    # # logf_knots = np.linspace(np.log(fmin), np.log(fmax), n_coeffs) # check knots location
+
+    # Switching to minimally correlated frequencies seleciton algorithm from LPF
+    min_noise_stretch_len = 7 * 24 * 3600 # 7 days minimum duration for noise estimation
+    logf_knots = np.log(choosefreqs(Nmax=min_noise_stretch_len/dt,fmax=fmax,fs=1/dt)[1])
+    n_coeffs = len(logf_knots)
+    # redefine fmin, fmax, ip
+    fmin = np.exp(logf_knots[0])
+    fmax = np.exp(logf_knots[-1])
+    # Band restriction
+    ip = np.where((f>=fmin) & (f <= fmax))[0]    
+    # skip padding
+    skip = 21000   
+    # interp kwargs
+    kwargs = {'kind':'cubic',
+            "axis":-1,
+            "copy":True,
+            "bounds_error": False,
+            "fill_value": "extrapolate",
+            "assume_sorted": True}
+    # basis function
+    basis_func = interpolate.interp1d(logf_knots, np.eye(n_coeffs), **kwargs)
+    
+    wd = masking.modified_hann(ub-skip-lb-skip, n_wind=n_wind)
+    # apply windowing
+    k2 = np.sum(wd**2)
+    #create frequency array for the FT of the noise stretch
+    fn = np.fft.fftfreq(data[comb].shape[0]) / dt
+    # only select chosen frequencies
+    ipn = np.where((fn>=fmin) & (fn <= fmax))[0]
+    # create array of noise stretch dft for each TDI combination
+    n_dft = [np.fft.fft(data[comb] * wd, data[comb].shape[0]) * np.sqrt(2 * dt / k2) for comb in channels]
+    
     # define design matrix from basis function
     design_matrix = basis_func(np.log(f[ip])).T
     # define projector
@@ -20,19 +57,33 @@ def interp_noise_stretch(n_dft, f, ip, basis_func, noisecoeffs, axs = None, **kw
     # define Log-periodogram minus mean
     log_per = np.log(np.asarray([np.abs(n_dft[j][ip])**2 for j in range(3)]).T) + 0.577215
     # obtain noise coefficients for the stretch
-    noisecoeffs += [[np.dot(projector, log_per[:, j]) for j in range(3)]]
+    noisecoeffs = [np.dot(projector, log_per[:, j]) for j in range(3)]
     # plot noise stretches and interpolated coefficients
     if axs is not None:
+        logf_knots = np.log(choosefreqs(Nmax=stretchlen/dt,fmax=fmax,fs=1/dt)[1])
         axs.T[len(noisecoeffs)-1][0].set_title("Noise stretch {n}".format(n = len(noisecoeffs)))
         for tdi, ax in enumerate(axs.T[len(noisecoeffs)-1]):
             ax.loglog(f[ip], np.abs(n_dft[tdi][ip])**2, zorder=0, alpha = 0.7)
             ax.scatter(np.exp(logf_knots), np.exp(noisecoeffs[-1][tdi]), color='tab:orange', zorder=1, s = 10)
-            ax.set_ylabel("TDI {t} PSD".format(t=channels[tdi]))
-            # for l in range(14
-            #     ax.scatter(np.exp(logf_knots[l]), np.exp(noisecoeffs[-1][tdi][l]), zorder=1)
-            #     # c = ax.gca().lines[-1].get_color()
-            #     ax.loglog((f),): (((design_matrix.T[l]) * np.exp(noisecoeffs[-1][0][l]))), ls = '-')
+            ax.set_ylabel("PSD")
         ax.set_xlabel("Frequency [Hz]")
+    
+    print("* Noise stretch # {n}: duration {d:.1f} days".format(n=len(noisecoeffs), d=d/86400))
+    # average interpolated coefficients
+    coeffs = np.average(np.asarray(noisecoeffs), axis = 0)
+    # interpolate log f knots
+    log_psd_func = [interpolate.interp1d(logf_knots, c, **kwargs) for c in coeffs]
+    # Define noise function
+    def s_function(freqs, **kwargs):
+        s_list = [np.exp(func(np.log(freqs))) for func in log_psd_func]
+        return s_list
+
+
+def interp_noise_stretch(n_dft, f, ip, basis_func, noisecoeffs, axs = None, **kwargs):#logf_knots = logf_knots, channels = channels):
+    """
+    Interpolate noise stretch periodograms.
+    """
+
 
     return noisecoeffs
 
