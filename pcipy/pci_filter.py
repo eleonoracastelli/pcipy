@@ -11,7 +11,7 @@ from sklearn.decomposition import PCA
 
 ## Working toward a new class for handling the apci processing
 
-class apci_data():
+class PCIFilter():
     '''
     Class for practical application of automatic pci. 
     
@@ -59,24 +59,23 @@ class apci_data():
         else:
             nc = ydata.shape[0]
             
-        self.ns = ns
         self.nc = nc
         self.nhalf = nhalf
+        self.ns = self.nsdata-2*nhalf
         self.order = order
         self.maxcompts =  maxcompts
         
         #time weighting params
         self.dt = dt
-        if dt is None: self.dt = 1/ns
+        if dt is None: self.dt = 1/self.ns
         self.t0=t0
-        if t0 is None: self.t0 =  ns//2*self.dt
+        if t0 is None: self.t0 =  self.ns//2*self.dt
         
             
         #define window to avoid zeros        
-        self.window=np.ones(ns,dtype=bool)
+        self.window=np.ones(self.nsdata,dtype=bool)
         self.window[:nhalf]=0
         self.window[-nhalf:]=0
-        self.ns=sum(window)
         
         datamatrix = self.build_data_matrix(ydata)
         print(datamatrix.shape)
