@@ -10,6 +10,29 @@ import numpy as np
 from scipy import interpolate
 
 def estimatePSD(data, dt, Nmax, fmax, axs = None):
+    '''
+    Estimate PSD of a given data stretch, by interpolating the log-periodogram of the data DFT.
+    Uses minimally correlated frequencies according to the CPSD estimation algorithm originally published in PhysRevLett.120.061101
+
+    Parameters
+    ----------
+    data : TYPE
+        DESCRIPTION.
+    dt : TYPE
+        DESCRIPTION.
+    Nmax : TYPE
+        DESCRIPTION.
+    fmax : TYPE
+        DESCRIPTION.
+    axs : TYPE, optional
+        DESCRIPTION. The default is None.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    '''
 
     # Switching to minimally correlated frequencies seleciton algorithm from LPF
     # # Number of interior knots
@@ -86,11 +109,11 @@ def choosefreqs(Nmax:int,fmax:float,fs:float):
     Parameters
     ----------
     Nmax : int
-        DESCRIPTION.
+        Maximum length of lowest frequency averaging window.
     fmax : float
-        DESCRIPTION.
+        Maximum frequency at which to stop evaluation.
     fs : float
-        DESCRIPTION.
+        Sampling frequency of the target data.
 
     Returns
     -------
@@ -124,8 +147,8 @@ def bh_lowpass(data,t_win=100,t_sam=5,fs=10):
 
     Parameters
     ----------
-    data : tuple
-        Synchronously sampled time series.
+    data : rec-array
+        Synchronously sampled time series with fields t', 'A', 'E', 'T'.
     t_win : TYPE, optional
         Window length, controls cut frequency. The default is 100.
     t_sam : TYPE, optional
@@ -135,9 +158,8 @@ def bh_lowpass(data,t_win=100,t_sam=5,fs=10):
 
     Returns
     -------
-    datalp : TYPE
-        DESCRIPTION.
-
+    datalp : rec-array
+        Low-passed time series with fields 't', 'A', 'E', 'T'.
     '''
 
     names = data.dtype.names[1:]
