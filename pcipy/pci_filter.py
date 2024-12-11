@@ -6,6 +6,9 @@ Created on Tue Dec 10 15:40:27 2024
 @author: E Castelli, J Baker
 """
 
+import numpy as np
+from sklearn.decomposition import PCA
+
 ## Working toward a new class for handling the apci processing
 
 class apci_data():
@@ -325,8 +328,6 @@ class apci_data():
         if n_channels is None: n_channels = self.maxcompts
         return self.channels[-n_channels:, :]        
             
-
-
 #outside class for development; expect to be moved in     
 # def covariance_by_link_psd_model(pci,freqs,s_n,n_components=None):
 #     '''
