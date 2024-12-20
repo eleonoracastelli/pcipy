@@ -17,7 +17,7 @@ class PCIFilter():
     
     
     '''
-    def __init__(self, ydata, fs, nhalf=45, order=1, maxcompts=10, t0=None, dt=None):
+    def __init__(self, ydata, fs, nhalf=45, order=1, maxcompts=10, t0=None, dt=None,zero_mean=False,detrend=False,sort_by_rms=False,Tscale=1):
         '''                                   
         Parameters
         ----------
@@ -34,7 +34,8 @@ class PCIFilter():
         t0 : float, optional
             Zero-time (relative to start of data to use in stencil definition (def: center of data; Note set t0=0 for default of 2023-24). The default is None.
         dt : float, optional
-            Timestep size to use for scaling (ie weighting) the higher-order data matrix sectors (def:1/ns). The default is None.
+            Timestep size to use for scaling (ie weighting) the higher-order data matrix sectors (def:Tscale/ns). The default is None.
+        Tscale : if dt is None, then dt defaults to Tscale/ns
 
         Returns
         -------
@@ -64,10 +65,11 @@ class PCIFilter():
         self.ns = self.nsdata-2*nhalf
         self.order = order
         self.maxcompts =  maxcompts
+        self.sort_by_rms=sort_by_rms
         
         #time weighting params
         self.dt = dt
-        if dt is None: self.dt = 1/self.ns
+        if dt is None: self.dt = Tscale/self.ns
         self.t0=t0
         if t0 is None: self.t0 =  self.ns//2*self.dt
         
@@ -77,21 +79,23 @@ class PCIFilter():
         self.window[:nhalf]=0
         self.window[-nhalf:]=0
         
-        datamatrix = self.build_data_matrix(ydata)
+        datamatrix = self.build_data_matrix(ydata, zero_mean=zero_mean,detrend=detrend)
         print(datamatrix.shape)
+        print("datamatrix mean", np.mean(datamatrix))
 
         self.apply_pca(datamatrix, maxcompts)
         
         print(datamatrix.shape,self.components.shape)
         self.channels = self.components.dot(datamatrix.T).astype(np.float64)
         print('channels shape',self.channels.shape)
+        print('channel means',np.flip(self.channels.mean(axis=1)))
         print('channel variances:',np.flip(self.explained_variance[-(maxcompts+1):]))
-    
+        
         
     def t_of_i(self,i):
         return -self.t0 + self.dt*i
             
-    def build_data_matrix(self, ys):
+    def build_data_matrix(self, ys, zero_mean=False, detrend=False):
         """
         Pre-process data to build a matrix of features of size n_features x n_data.
 
@@ -111,7 +115,9 @@ class PCIFilter():
 
         Comment: Versions of this func had a "window" option used in periodograms, but this seems not to have been used in any PCI 2.0 notebooks so we leave it out here
         """ 
-    
+        detrend_before=True
+        detrend_after=False
+        
         ###Plan to generalize to work with a sub-stretch of the data???
         ns = len(ys[0])
         nhalf=self.nhalf
@@ -127,14 +133,35 @@ class PCIFilter():
         ###Weighting may also depend on time power
         tt = np.linspace(0, self.dt*ns, ns) - self.t0  ##Should be consistent with self.t_of_i(index)            
 
+        ##Note that we do detrending before timeshifting and windowing and multiplying by T^n.  This doesn't guarantee exactly. Other options can be considered.        
+        if detrend_before:
+            if detrend:
+                from scipy.signal import detrend as scipy_detrend 
+                print(ys.shape)
+                ys=scipy_detrend(ys)
+            elif zero_mean:
+                print('ys',ys.shape)
+                print('means',np.mean(ys,axis=1))
+                ys = (ys.T - np.mean(ys,axis=1).T).T
+                print('new means',np.mean(ys,axis=1))
+        
         datamatrix_list = [np.hstack([np.array([self.construct_shifted_series(ydata, ishift, 
                                                 window=(tt**m))[window]  ###Maybe the optimal window weighting is m-dependent?? 
                                                 for ydata in ys]).T 
                                       for ishift in np.arange(-nhalf, nhalf+1)])
                            for m in range(0, order+1)]
 
-        print('shape in build datamatrix',np.shape(datamatrix_list))
-        return np.hstack(datamatrix_list)
+        matrix = np.hstack(datamatrix_list)
+        print('shape in build datamatrix',np.shape(matrix))
+        if detrend_after:
+            if detrend:
+                from scipy.signal import detrend as scipy_detrend 
+                matrix=scipy_detrend(matrix,axis=0)
+            elif zero_mean:
+                print('means',np.mean(matrix,axis=0))
+                matrix = (matrix - np.mean(matrix,axis=0))
+                print('new means',np.mean(matrix,axis=0))
+        return matrix
     
     def construct_shifted_series(self, p, ishift, window=1.0):
         """
@@ -193,7 +220,7 @@ class PCIFilter():
         return v                        
         
     
-    def apply_for_channels(self,ydata, n_channels=None):
+    def apply_for_channels(self,ydata, n_channels=None, zero_mean=False, detrend=False):
         '''
         Apply the precomputed data filters to derive PCI results from distinct data
 
@@ -211,11 +238,11 @@ class PCIFilter():
 
         '''
 
-        datamatrix = self.build_data_matrix(ydata)
-        if n_channels is None: n_channels=self.maxcompt
+        datamatrix = self.build_data_matrix(ydata,zero_mean=zero_mean,detrend=detrend)
+        if n_channels is None: n_channels=self.maxcompts
         return self.components[-n_channels:].dot(datamatrix.T).astype(np.float64)
     
-    def apply_for_channels_split_orders(self,ydata, n_channels=None):
+    def apply_for_channels_split_orders(self,ydata, n_channels=None,zero_mean=False,detrend=False):
         '''
         Apply the precomputed data filters to derive PCI results from distinct data
         but split into separate parts for the different temporal orders.  If the
@@ -248,7 +275,7 @@ class PCIFilter():
         #Undo the X-> H datamatrix stacking:
         
         if n_channels is None: n_channels=self.maxcompt            
-        datamatrix = self.build_data_matrix(ydata)
+        datamatrix = self.build_data_matrix(ydata,zero_mean=zero_mean,detrend=detrend)
         unstacked=datamatrix.reshape(datamatrix.shape[0],self.order+1,-1)
         print('unstacked data mtrix shape',unstacked.shape)
         print('comps shape',self.components[-n_channels:].shape)
@@ -276,16 +303,40 @@ class PCIFilter():
         None.
 
         '''
-
+        diagnostics=True
+        
         print(datamatrix.shape)
         #We set svd_solver='full' here for consistency, but the default 'auto' may be fine for most purposes
         #A minor issue with auto is that, under some conditions an approximation was used which caused the
         #last component explained variance to come out exactly zero, when the corresponding channel did not vanish
         pca=PCA(svd_solver="full").fit(datamatrix)
-        self.explained_variance=self.explained_variance_=pca.explained_variance_
-        self.components=self.components_=pca.components_[-maxcomponents:]
-        print('diagonality test')
-        print(np.matmul(self.components,self.components.T))
+        self.explained_variance=pca.explained_variance_
+        components=pca.components_
+        if self.sort_by_rms:
+            ynew=components.dot(datamatrix.T).astype(np.float64)
+            rms2=(np.sum(ynew**2,axis=1)/len(ynew.T))
+            reordering=np.argsort(-rms2)
+            self.explained_variance=self.explained_variance[reordering]
+            components=components[reordering]
+        self.components=components[-maxcomponents:]
+        if diagnostics:
+            ynew=components.dot(datamatrix.T).astype(np.float64)
+            self.explained_rms=np.sqrt(np.sum(ynew**2,axis=1)/len(ynew.T))
+            ynew_zm=(ynew.T-np.mean(ynew,axis=1)).T
+            variance_check=np.sum(ynew_zm**2,axis=1)/(len(ynew.T)-1)
+            #print('variance check:\n',variance_check, '\n',self.explained_variance)
+            print('variance check rms:',np.sqrt(np.sum((variance_check/self.explained_variance-1)**2)))
+            chans=ynew_zm[-maxcomponents:]
+            nchan=len(chans)
+            cov=np.matmul(chans,chans.T)/(len(ynew.T)-1)
+            print('shapes of chans, cov, components:',chans.shape,cov.shape,self.components.shape)
+            sigmas=np.sqrt([cov[i,i] for i in range(nchan)])
+            print(sigmas**2/self.explained_variance[-nchan:])
+            corr=np.array([[cov[i,j]/sigmas[i]/sigmas[j] for i in range(nchan)] for j in range(nchan)])
+            diag_test=corr-np.identity(nchan)
+            print('channel covariance diagonality test on '+str(nchan)+' components:',np.sqrt(np.sum(diag_test**2)/(nchan*(nchan-1))))    
+            diag_test=np.matmul(self.components,self.components.T)-np.identity(maxcomponents)
+            print('component diagonality test on '+str(maxcomponents)+' components:',np.sqrt(np.sum(diag_test**2)/(maxcomponents*(maxcomponents-1))))
     
     
     def apply_svd(self, datamatrix,maxcomponents):  ##should be equivalent, untested
@@ -306,7 +357,7 @@ class PCIFilter():
         
         print(datamatrix.shape)
         U, S, Vt = svd(datamatrix, full_matrices=True)
-        self.explained_variance=self.explained_variance_=S**2/(len(datamatrix)-1)
+        self.explained_variance=self.explained_variance=S**2/(len(datamatrix)-1)
         self.components=self.components_=Vt[-maxcomponents:]
 
         
