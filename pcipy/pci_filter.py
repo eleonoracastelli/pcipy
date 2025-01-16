@@ -10,14 +10,18 @@ import numpy as np
 from sklearn.decomposition import PCA
 
 ## Working toward a new class for handling the apci processing
-
+"""
+Some plan ideas:
+ Want to shift the basic function of PCIFilter class to be for application downstream rather than for the PCI part itself.  This could be via a parent "Filter" class (which could also have a TDI version).  The filter can be used to get a sencil matrix for any regular grid of physical times. For a basic PCI filter this would need to store just the time-referencing info and a set of stencil components.  It would also need the basic generation functions.
+ Most of what we have in the current PCIFilter is extra.  We could extract a little from that into a new base class and let the current one become special for experimentation (or drop it).
+ For the moment, we keep building in here, but plan to soon split this up into a number of derived class options, each of which will be concrete about the output channels.
+"""
 class PCIFilter():
     '''
     Class for practical application of automatic pci. 
-    
-    
+        
     '''
-    def __init__(self, ydata, fs, nhalf=45, order=1, maxcompts=10, t0=None, dt=None,zero_mean=False,detrend=False,sort_by_rms=False,Tscale=1):
+    def __init__(self, ydata, fs, nhalf=45, order=1, maxcompts=10, t0=None, dt=None,zero_mean=False,detrend=False,sort_by_rms=False,Tscale=1, ref_t0=None, ref_dt=None, verbose=False):
         '''                                   
         Parameters
         ----------
@@ -36,11 +40,12 @@ class PCIFilter():
         dt : float, optional
             Timestep size to use for scaling (ie weighting) the higher-order data matrix sectors (def:Tscale/ns). The default is None.
         Tscale : if dt is None, then dt defaults to Tscale/ns
+        ref_t0 : external time reference corresponding to the first data sample
+        ref_dt : external time reference sampling rate
 
         Returns
         -------
-        None.
-        
+        None.        
         
         The input channels are stretches of data, usually of length ns+2*nhalf, but sometimes varying. The variations are:
           : (full length of matrix)
@@ -67,33 +72,58 @@ class PCIFilter():
         self.maxcompts =  maxcompts
         self.sort_by_rms=sort_by_rms
         
-        #time weighting params
-        self.dt = dt
-        if dt is None: self.dt = Tscale/self.ns
-        self.t0=t0
-        if t0 is None: self.t0 =  self.ns//2*self.dt
+        #external time reference
+        #default is zero start and unit cadence
+        if ref_t0 is None:
+            self.ref_t0=0
+        else:
+            self.ref_t0=ref_t0
+        if ref_dt is None:
+            self.ref_dt=1
+        else:
+            self.ref_dt=ref_dt       
         
-            
+        #time weighting params
+        self.scaled_dt = dt
+        if dt is None: self.scaled_dt = Tscale/self.ns
+        self.scaled_t0=t0
+        if t0 is None: self.scaled_t0 =  self.ns//2*self.scaled_dt
+        
         #define window to avoid zeros        
         self.window=np.ones(self.nsdata,dtype=bool)
         self.window[:nhalf]=0
         self.window[-nhalf:]=0
         
         datamatrix = self.build_data_matrix(ydata, zero_mean=zero_mean,detrend=detrend)
-        print(datamatrix.shape)
-        print("datamatrix mean", np.mean(datamatrix))
-
+        #print('dm shape',datamatrix.shape)
+        
         self.apply_pca(datamatrix, maxcompts)
+        #print('pca done')
         
-        print(datamatrix.shape,self.components.shape)
+        #stencil default specification
+        self.set_stencil(self.maxcompts)
+        #print('stencil done')
+        
+        #print(datamatrix.shape,self.components.shape)
         self.channels = self.components.dot(datamatrix.T).astype(np.float64)
-        print('channels shape',self.channels.shape)
-        print('channel means',np.flip(self.channels.mean(axis=1)))
-        print('channel variances:',np.flip(self.explained_variance[-(maxcompts+1):]))
+        #print('channels done')
         
+        if verbose:
+            print("datamatrix mean", np.mean(datamatrix))
+            print('channels shape',self.channels.shape)
+            print('channel means',np.flip(self.channels.mean(axis=1)))
+            print('channel variances:',np.flip(self.explained_variance[-(maxcompts+1):]))
+        del(datamatrix)
         
-    def t_of_i(self,i):
-        return -self.t0 + self.dt*i
+    def i_of_ref_time(self, time):
+        '''
+        Compute the grid time (as float) from the reference time. This function does not necessarily  generalize to multiple grid versions.
+        '''
+        time_i = time/self.ref_dt+self.ref_t0
+        return time_i
+    
+    def scaled_t_of_i(self,i):
+        return -self.scaled_t0 + self.scaled_dt*i
             
     def build_data_matrix(self, ys, zero_mean=False, detrend=False):
         """
@@ -131,7 +161,7 @@ class PCIFilter():
         ### Plan to generalize this because the results can depend on how tt is scaled (and offset). 
         ###Control of this is likely crucial for compound-segment treatments
         ###Weighting may also depend on time power
-        tt = np.linspace(0, self.dt*ns, ns) - self.t0  ##Should be consistent with self.t_of_i(index)            
+        tt = np.linspace(0, self.scaled_dt*ns, ns) - self.scaled_t0  ##Should be consistent with self.scaled_t_of_i(index)            
 
         ##Note that we do detrending before timeshifting and windowing and multiplying by T^n.  This doesn't guarantee exactly. Other options can be considered.        
         if detrend_before:
@@ -152,7 +182,7 @@ class PCIFilter():
                            for m in range(0, order+1)]
 
         matrix = np.hstack(datamatrix_list)
-        print('shape in build datamatrix',np.shape(matrix))
+        #print('shape in build datamatrix',np.shape(matrix))
         if detrend_after:
             if detrend:
                 from scipy.signal import detrend as scipy_detrend 
@@ -185,7 +215,17 @@ class PCIFilter():
 
         return pshift * window
 
-    def stencil_at_timestep(self,it=None, n_channels=None):
+    def set_stencil(self, n_channels):
+        '''
+        For use with the stencil functions below.  We specify n_channels to fix the stencil components externally as these functions to support a generic interface where the channels are fully pre-specified.
+        The argument is to specify the number of channels. Internally this sets up self.stencil_compts
+        which has shape (n_channels, order+1, 6*(1+2*nhalf))
+        '''
+        self.stencil_n_channels=n_channels
+        self.stencil_compts=self.components[-n_channels:].reshape(n_channels,self.order+1,-1)
+    
+        
+    def stencil_at_time(self, tref=None):
         '''
         Evaluate the effective time-dependent PCI[0] stencil for time step 'it'.         
         For higher-order aPCI the effective filter stencil is time-dependent.  If a representative 'constant'
@@ -193,23 +233,24 @@ class PCIFilter():
 
         Parameters
         ----------
-        it : TYPE, optional
-            the time index (relative to the PCI-generating data)  [default data central time]. The default is None.
-        n_channels : TYPE, optional
-            number of channel stencils to compute . The default is None.
+        tref : TYPE, optional
+            the external reference time value where the stencil should be evaluated  [default data central time]. 
 
         Returns
         -------
-        v : TYPE
+        v_grid : TYPE
             DESCRIPTION.
 
         '''
+        n_channels=self.stencil_n_channels
         
-        if it is None: it = self.ns//2
+        if tref is None:
+            it = self.ns//2
+            tref=self.ref_t0+it*self.ref_dt
         
-        t = self.t_of_i(it) 
+        t = self.scaled_t_of_i(self.i_of_ref_time(tref)) 
         
-        v_compts=self.components[-n_channels:].reshape((nchannels,self.order+1,-1))
+        v_compts=self.stencil_compts
         
         v = v_compts[:,0,:]
         tpow=1
@@ -217,8 +258,79 @@ class PCIFilter():
             tpow *= t
             v += tpow*v_compts[:,i+1,:]
             
-        return v                        
+        return v
+
+    def generate_stencil_grid(self, tref_start, dtref, nsamp):
+        '''
+        Generate the full stencil grid for computing output channelsEvaluate the effective time-dependent PCI[0] stencil for time step 'it'.         
+        For higher-order aPCI the effective filter stencil is time-dependent.  If a representative 'constant'
+                stencil is needed, one can use the stencil as evaluated at a particular
+
+        Parameters
+        ----------
+        tref_start : float
+            The external reference time value starting the grid where the stencil should be evaluated.
+        dtref : float
+            The reference time step size for the evaluation grid.
+        nsamp : int
+            Tthe number of samples in the evaluation grid
+
+        Returns
+        -------
+        v : ndarray with shape=(nsamp,nchannels,6*(1+2*nhalf))
+            Stencil grid
+        '''
+
+        times=np.arange(nsamp)*dtref+tref_start
+        t0 = self.scaled_t_of_i(self.i_of_ref_time(times)) 
         
+        v_compts=self.components[-n_channels:].reshape((nchannels,self.order+1,-1))
+        
+        v = v_compts[:,0,:]
+        tpow=1
+        for i in range(self.order):
+            tpow *= t0
+            v += np.outer(tpow,v_compts[:,i+1,:])
+            
+        return v                        
+
+    def apply_stencil_for_channels(self,ydata,tref_start,dtref):
+        '''
+        This function is imcompletely drafted.  When finished, it should provide the same results as
+        apply_for_channels, suitably called. This one fits a more generic interface (and may be more efficient)
+        '''
+        
+        nd=len(ydata.T)
+        nhalf=self.nhalf
+        window=np.ones(nd,dtype=bool)
+        window[:nhalf]=0
+        window[-nhalf:]=0
+        nsamp=sum(window)
+        ndelay=self.stencil_compts.shape[2]
+        nchan=self.stencil_compts.shape[0]
+
+        # Treating the stincil as an FIR filter, we can avoid constructing the huge data matrix
+        # We realize the convolution by hand in the time domain, though for longer kernels
+        # it would be faster in Fourier domain
+        delays=list(range(-nhalf,nhalf+1))
+        times=np.arange(nsamp)*dtref+tref_start
+        tt = self.scaled_t_of_i(self.i_of_ref_time(times)) 
+        tpow=1
+        tpows=[tpow]
+        for i in range(self.order):
+            tpow*=tt
+            tpows+=[tpow]
+
+        X=np.hstack([np.array([
+                               self.construct_shifted_series(ydata, ishift, window=window)
+                               for ydata in ys]).T 
+                                                
+                     for ishift in np.arange(-nhalf, nhalf+1)])
+
+        stencil_grid=self.generate_stencil_grid(tref_start+nhalf*dtref, dtref, nsamp)
+
+        return multipledot.something
+
     
     def apply_for_channels(self,ydata, n_channels=None, zero_mean=False, detrend=False):
         '''
@@ -283,9 +395,59 @@ class PCIFilter():
         print('comps reshaped',orderedcomps.shape)
         
         return [orderedcomps[:,m].dot(unstacked[:,m,:].T).astype(np.float64) for m in range(self.order+1)]
-        
-
     
+    def filter_single_link_data(self, ydata,n_channels=None):
+        '''
+        Compute recovered single-link channel vectors from a set of single-link data. This should yield 
+        identical results to appropriately called compute_single_link_from_channels but we first implement
+        separately for testing, since the stencil_compts stuff is new. This one is more low-level and 
+        doesn't assum the stencil is selected.
+        
+        Parameters
+        ----------
+        ydata : ndarray 
+            The raw single-link data-set to be transformed.
+
+        Returns
+        -------
+        reconstructed_ydata : ndarray
+            Reconstructed single link data channels
+        '''
+        if n_channels is None: n_channels=self.maxcompts
+        y_transformer=self.components[-n_channels:,:6].T
+
+        chans_data = self.apply_for_channels(ydata, n_channels)
+        Z=np.dot(y_transformer,chans_data)
+        print('single link data shape', Z.shape)
+        return Z
+        
+    
+    def compute_single_links_from_channels(self,channels_data):
+        '''
+        Compute recovered single-link channel vectors from a set of pri-computed PCI channels using the stencil_compts.
+        
+        Parameters
+        ----------
+        channels_data : ndarray 
+            The computed channel data.
+
+        Returns
+        -------
+        reconstructed_ydata : ndarray
+            Reconstructed single link data channels
+
+        The algorithm transform's back to the Y-channel frame by using the transpose (inverse) of the "V" matrix, components of which 
+        are used to select the channels. This would identically reconstruct the original data if we used all possible channels. This
+        is related to "Zero-phase component analysis" (ZCA) often applied for whitening data.
+        '''
+        
+        assert len(channels_data)==len(self.stencil_compts), "Stencil length ("+str(len(self.stencil_compts))+") doesn't match received channel count."
+                                                                                     
+        y_transformer = self.stencil_compts[:,0,:6].T  #The first six columns should correspont to the T^0, unshifted Y elems
+        Z=np.dot(y_transformer,channels_data)
+        print('single link shape', Z.shape)
+        return Z
+
 
     def apply_pca(self, datamatrix,maxcomponents):
         '''
@@ -355,7 +517,7 @@ class PCIFilter():
          None.
         '''
         
-        print(datamatrix.shape)
+        #print(datamatrix.shape)
         U, S, Vt = svd(datamatrix, full_matrices=True)
         self.explained_variance=self.explained_variance=S**2/(len(datamatrix)-1)
         self.components=self.components_=Vt[-maxcomponents:]
@@ -368,17 +530,28 @@ class PCIFilter():
         if n_channels is None: n_channels = self.maxcompts
         #return [self.components_[-n_channels+i, :] 
         #                      for i in range(n_channels)]
-        return self.components[-n_channels, :] 
+        return self.components[-n_channels:] 
     
     def e_pci(self, n_channels=None):
         '''
-        Projection of either the original data matrix, or one build from provided y_data.
+        Projection of either the original data matrix, or one build from provided y_data. TBD?  See aply_for_channels
         '''
         
         if n_channels is None: n_channels = self.maxcompts
         return self.channels[-n_channels:, :]        
-            
-#outside class for development; expect to be moved in     
+
+    
+
+class SplitFilter(PCIFilter):
+    '''
+    Class for practical application of automatic pci. 
+    
+    
+    '''
+    def __init__(self, ydata, fs, nhalf=45, order=1, maxcompts=10, t0=None, dt=None,zero_mean=False,detrend=False,sort_by_rms=False,Tscale=1):
+        pass
+        
+#outside class for development; consider moving in     
 # def covariance_by_link_psd_model(pci,freqs,s_n,n_components=None):
 #     '''
 #     Apply a model of the secondary noise PSD to get stantionary FD covariance matrix for the data channels
@@ -416,3 +589,5 @@ class PCIFilter():
 #     cov *= s_n[:, np.newaxis, np.newaxis]  ##Note that we assume equality for link PSDs  ##FIXME
     
 #     return cov
+
+
