@@ -23,11 +23,11 @@ sys.path.insert(0, os.path.abspath('../pcipy'))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ['myst_parser',
-              "sphinx.ext.autosectionlabel",
-              "sphinx.ext.autodoc",
-              "sphinx.ext.viewcode",
-              "sphinx.ext.napoleon",
-              "sphinx.ext.mathjax",
+              # "sphinx.ext.autosectionlabel",
+              # "sphinx.ext.autodoc",
+              # "sphinx.ext.viewcode",
+              # "sphinx.ext.napoleon",
+              # "sphinx.ext.mathjax",
 ]
 
 templates_path = ['_templates']
