@@ -14,9 +14,10 @@ It implements the aPCI method outlined in the first and second PCI papers.
    
    modules
 
+
 Installation
 ============
 Install pyLISA by cloning this repository and unzipping the source code.
 Then use this command:
 
-    python setup.py install
+   python setup.py install
