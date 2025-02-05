@@ -8,13 +8,11 @@ This repo builds on the contents of pylisa, but structures the code using Python
 
 It implements the aPCI method outlined in the first and second PCI papers.
 
-```{eval-rst}
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
    
    modules
-```
 
 Installation
 ============
