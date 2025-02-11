@@ -127,6 +127,3 @@ We need $q$ to be large enough to get the gravitational wave content, but small 
 - what is the optimal length of a data stretch to use in the channel identification? (right now, hours to days)
 - how many time orders to include in the data matrix? (more for a longer stretch, in principle)
 - while PCA orders the components by variance, LISA's red noise data can't be naturally treated as zero-mean. An alternative is to select the components with the smalles RMS values. 
-
-
-[^1]: 
