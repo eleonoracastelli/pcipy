@@ -1,4 +1,3 @@
-
 PCIpy documentation
 ===================
 
@@ -22,7 +21,8 @@ Contents
     :maxdepth: 1
    
     Home <self>
-    simulation
+    PCI
+    usage
 ```
 
 
