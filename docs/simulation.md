@@ -17,47 +17,69 @@ In the package we provide three simulation scripts that can be executed in the t
 - `all_sky_signal_simulation.py` to simualte a stochastic graviational wave background.
 
 
-### Simulation of laser + secondary noises using LISA Instrument
+A generic simulation scripts `simulation_script.py` can be executed in the terminal and written to path `path-to-workdir` by following the structure
+```shell
+python simulation_script.py path-to-workdir --flags
+```  
+where `--flags` are used to pass various options to the script.
 
-The simulation is carried out within `noise_simulation.py`.
+The flags implemented in the all the simulation scripts listed here are the following:
+- `--dt (float)` setting up sampling time (s)
+- `--freq1 (float)` to set up Kaiser filter first transition frequency (Hz)
+- `--freq2 (float)` to set up Kaiser filter second transition frequency (Hz)
+- `--tdi (int)` Pass TDI generation: choice between 1 and 2
 
-Simulation parameters match the simulation parameters defined in 
-LISA-LCST-SGS-RP-006 "End-to-end Demonstration Data Analysis Pipeline"
 
-#### Usage:
-- Execute simulation with no TDI computation:
-```
+
+### Simulation of noise using LISA Instrument
+
+The simulation is carried out within `noise_simulation.py`. 
+
+Here we simulate 3 days of data, and provide options to generate the TDI output of the simulated data and specify which  noise configurations to use.
+
+The implemented noise configuration can be selected when executing the simulation script:
+- simple simulation containing only laser, test-mass and OMS noise (default configuration, no additonal flag needed)
+- baseline simulation parameters match the simulation parameters defined in 
+LISA-LCST-SGS-RP-006 "End-to-end Demonstration Data Analysis Pipeline", including laser, test-mass, OMS, modulation, ranging, clock and backlink noise (additional flag `--baseline`)
+
+with the additional option of saving each individual noise contribution by adding the flag `--individual`.
+
+#### Usage examples:
+- Execute simulation in the simple noise configuration containing only laser, test-mass and OMS noise with no TDI computation 
+```shell
 python noise_simulation.py path-to-workdir
 ```        
 
-- Execute simulation with TDI computation: use flag `--tdi` to specify TDI generation 
-```    
+- Execute simulation in the simple noise configuration containing only laser, test-mass and OMS noise with TDI computation: use flag `--tdi` to specify TDI generation 
+```shell
 python noise_simulation.py path-to-workdir --tdi 2   
 ```        
 
-- Execute simulation with baseline InRep configuration
-```    
+- Execute simulation with baseline "End-to-end Demonstration Data Analysis Pipeline" configuration with no TDI computation 
+```shell   
 python noise_simulation.py path-to-workdir --baseline
 ```        
 
-= Execute simulation with baseline InRep configuration an save all individual noise contributions
-```    
-python noise_simulation.py path-to-workdir --baseline --individual
+- Execute simulation with baseline "End-to-end Demonstration Data Analysis Pipeline" configuration with TDI computation and save all individual noise contributions
+```shell   
+python noise_simulation.py path-to-workdir --tdi 2 --baseline --individual
 ```
 
 ### Simulation of SGWB signal using LISA GW Response
 
 The simulation is carried out within `signal_simulation.py` and `all_sky_signal_simulation.py`.
 
-`signal_simulation.py` simulates a stochastic point source located at $\beta = \pi/2$, $\lambda = \pi/2$, while `all_sky_signal_simulation.py` simulates a Stochastic GW background with a white generator.
+Here we simulate 3 days of data, and provide options to generate the TDI output of the simulated data with different signals depending on the chosen simulation script:
+- `signal_simulation.py` simulates a stochastic point source located at $\beta = \pi/2$, $\lambda = \pi/2$
+- `all_sky_signal_simulation.py` simulates a stochastic GW background with a white generator.
 
 #### Usage:
 Execute simulation with no TDI computation (analogous for `all_sky_signal_simulation.py`):
-```
+```shell
 python signal_simulation.py path-to-workdir
 ```        
 
 Execute simulation with TDI computation (analogous for `all_sky_signal_simulation.py`): use flag `--tdi` to specify TDI generation 
-```    
+```shell   
 python signal_simulation.py path-to-workdir --tdi 2   
 ```
