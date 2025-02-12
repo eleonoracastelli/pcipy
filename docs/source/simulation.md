@@ -1,4 +1,4 @@
-## Simulation
+## Simulate LISA data: noise and signal
 
 PCI is applied directly to the LISA phasemeter measurements.
 
@@ -43,6 +43,13 @@ The implemented noise configuration can be selected when executing the simulatio
 LISA-LCST-SGS-RP-006 "End-to-end Demonstration Data Analysis Pipeline", including laser, test-mass, OMS, modulation, ranging, clock and backlink noise (additional flag `--baseline`)
 
 with the additional option of saving each individual noise contribution by adding the flag `--individual`.
+
+The outputs of the simulation will be:
+- a full simulation dataset (laser noise + secondary noises), with filename `'yyyy-mm-dd_HHhMM_configuration_measurements_4Hz.h5'`
+- a secondary noises only simulation dataset, with filename `'yyyy-mm-dd_HHhMM_configuration_noise_sec_4Hz.h5'`
+- if `--individual` is selected, additional simulation datasets for each noise source, with filenames `'yyyy-mm-dd_HHhMM_configuration_individualnoise_4Hz.h5'`.
+
+In the filenames`'configuration'` can either be `'laser_tm_oms'` or `'baseline'` and `'individualnoise'` will be wither of `'laser'`, `'test-mass'`, `'oms'`, `'ranging'`, `'backlink'`, `'clock'`, `'modulation'`
 
 #### Usage examples:
 - Execute simulation in the simple noise configuration containing only laser, test-mass and OMS noise with no TDI computation 
