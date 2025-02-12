@@ -1,4 +1,4 @@
-# PCI
+# Principal Component Interferometry (PCI) principles
 (from John's AAS poster)
 
 Principal Component Interferometry (PCI) is an analysis technique whose theory we outline in two papers:
