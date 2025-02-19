@@ -7,7 +7,9 @@ Created on Jan 16 20:00:05 UTC 2025
 """
 
 import numpy as np
+from scipy.signal import convolve
 from .data import TimeData
+
 
 class LinearFilter:
     '''
@@ -94,6 +96,7 @@ class LinearFilter:
         self.stencil_compts=np.zeros((self.n_output_channels,1+nleft+nright))
         self.stencil_compts[:,nleft]=1
         self.constant_stencil=True
+        self.dt=None
 
     def check_data(self, input_data, verbose=False):
         '''
@@ -106,7 +109,7 @@ class LinearFilter:
         '''
 
         if input_data.n_channels()!=self.n_input_channels:
-            if verbose: print('Wrong count of channels.')
+            if verbose: print('Wrong count of channels. Expected '+str(self.n_input_channels)+' but got '+str(input_data.n_channels()))
             return False
         if self.dt is not None:
             if self.dt != input_data.dt:
@@ -114,12 +117,12 @@ class LinearFilter:
         if self.constant_stencil:
             if input_data.t0 is None:
                 if verbose: print('Unless the stencil is constant the input data must have t0 set to realize the filtering.')
-        if input_names is not None:
-            return input_data.match_names(self.input_names,verbose)
+        if self.input_names is not None:
+            return self.input_data.match_names(self.input_names,verbose)
         
         return True
 
-    def apply_filter(self, input_data, check=True):
+    def apply_filter(self, input_data, check=True,method='dot'):
         '''
         Apply the encoded filter to the input_data.
 
@@ -134,6 +137,9 @@ class LinearFilter:
             The data to be filtered.
         check : bool, optional
             Whether to check the data before applying the filter (def True).
+        method : str
+            Variants on how to realize the computation, 'dot' for a direct
+            approach using np.dot, or 'convolve' using scipy.signal.convolve 
         '''
         assert self.check_data(input_data), 'Data check was:'+str(self.check_data(input_data,verbose=True))
         assert self.constant_stencil, 'Base class apply_filter requires a constant stencil.'
@@ -141,10 +147,19 @@ class LinearFilter:
         #Not sure what the fastest implementation of this is
         ns=input_data.n_samples()
         ne=ns-self.nleft-self.nright
-        data=np.zeros((self.n_output_channels(),ne))
-        for ioc in range(self.n_output_channels):
-            for i in range(1+self.nleft+self.nright):
-                data[ioc]+=np.dot(self.stencil_compts[ioc,i],input_data[:,i:ne+i])
+        data=np.zeros((self.n_output_channels,ne))
+        if method=='dot':
+            for ioc in range(self.n_output_channels):
+                print(ioc,self.nleft,self.nright)
+                for i in range(1+self.nleft+self.nright):
+                    data[ioc]+=np.dot(self.stencil_compts[ioc,i],input_data.data[:,i:ne+i])
+        elif method=='convolve':
+            for ioc in range(self.n_output_channels):
+                print(ioc,self.nleft,self.nright,self.stencil_compts.shape,input_data.data.shape)
+                for i in range(self.n_input_channels):
+                    data[ioc]+=convolve(self.stencil_compts[ioc,:,i],input_data.data[i,:],mode='valid')
+
+        else: raise ValueError('Invalid value for "method"')
         t0=self.t0
         if t0 is not None and self.dt is not None: t0+=self.nleft*self.dt
         return TimeData(data, dt=self.dt, t0=t0, names=self.output_names)

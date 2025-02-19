@@ -61,13 +61,17 @@ class DeducedTDIFilter(LinearFilter):
         
         ioff,stencil = DeducedTDIFilter.compute_stencil_from_measurements(measurements_data,i0=i0,nleft=nleft,nright=nright)
         self.nleft = ioff
-        self.nright=len(stencil[0,0])
+        self.nright=len(stencil[0,0])-1
         self.n_input_channels=6
         self.input_names=None
         self.n_output_channels=3
         self.stencil_compts=np.transpose(stencil,[0,2,1])
+        #print('Constructed TDI stencil of shape',self.stencil_compts.shape,' and set nleft and nright to:',self.nleft, self.nright)
         self.constant_stencil=True
-    
+        self.dt=1/measurements_data.fs
+        self.t0=None
+        self.output_names=['X','Y','Z']
+        
     def compute_stencil_from_measurements(measurements,i0,nleft,nright):
         '''
         Deduce the TDI stencil.
