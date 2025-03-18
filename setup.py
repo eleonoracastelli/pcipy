@@ -38,8 +38,16 @@ setup(
         keywords='principal component analysis, gravitational-wave interferometry, \
             LISA',
         # python_requires='>=3.5',
-        install_requires=['numpy', 'xarray', 'scipy', 'sympy', 
-        'pyfftw', 'h5py', 'scikit-learn'],
+        install_requires=['numpy', 
+                          'xarray', 
+                          'scipy', 
+                          'sympy', 
+                          'pyfftw', 
+                          'h5py', 
+                          'scikit-learn', 
+                          'lisainstrument>=1.8',
+                          'lisagwresponse',
+                          'pytdi'],
         # needs to be installed along with your package. Eg: 'caer'
 
         classifiers= [
