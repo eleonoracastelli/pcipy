@@ -274,6 +274,7 @@ if __name__ == "__main__":
     instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
 
     instr.simulate()
+    simseed = instr.seed
 
     simseed = instr.seed
 
