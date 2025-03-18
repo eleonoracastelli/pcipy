@@ -174,6 +174,7 @@ if __name__ == "__main__":
     # Disable all noises
     instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
     instr.simulate()
+    simseed = instr.seed
 
     # Choose files' prefixes
     # datetime object containing current date and time
@@ -220,7 +221,8 @@ if __name__ == "__main__":
     
     if args.baseline:
         # Instantiate LISA instrument
-        instr = Instrument(size=n_data,
+        instr = Instrument(seed=simseed,
+                           size=n_data,
                             dt=dt,
                             t0=1000 + orbit_t0,
                             lock=locking, 
@@ -278,7 +280,8 @@ if __name__ == "__main__":
         
         for n in noises:
             # Instantiate LISA instrument
-            instr = Instrument(size=n_data,
+            instr = Instrument(seed=simseed,
+                               size=n_data,
                                 dt=dt,
                                 t0=1000 + orbit_t0,
                                 lock=locking, 
@@ -293,7 +296,8 @@ if __name__ == "__main__":
             noises = ['ranging', 'backlink', 'clock', 'modulation']
             for n in noises:
                 # Instantiate LISA instrument
-                instr = Instrument(size=n_data,
+                instr = Instrument(seed=simseed,
+                                   size=n_data,
                                     dt=dt,
                                     t0=1000 + orbit_t0,
                                     lock=locking, 
