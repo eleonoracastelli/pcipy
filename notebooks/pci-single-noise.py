@@ -203,28 +203,28 @@ kwargs = {"fs": fs,
           "return_onesided": True,
           "scaling": 'density'}
 
-tdi_times = np.arange(ns)*dt
+# tdi_times = np.arange(ns)*dt
 
-fig, ax = plt.subplots(2, 1, figsize=(8, 6), sharex = False)
-ax[0].plot(tdi_times, x2_noise[skip:skip+ns], label = 'X')
-ax[0].plot(tdi_times, y2_noise[skip:skip+ns], label = 'Y')
-ax[0].plot(tdi_times, z2_noise[skip:skip+ns], label = 'Z')
-ax[0].grid()
-ax[0].legend()
-ax[0].set_xlabel('Time [s]')
-ax[0].set_ylabel('TDI')
+# fig, ax = plt.subplots(2, 1, figsize=(8, 6), sharex = False)
+# ax[0].plot(tdi_times, x2_noise[skip:skip+ns], label = 'X')
+# ax[0].plot(tdi_times, y2_noise[skip:skip+ns], label = 'Y')
+# ax[0].plot(tdi_times, z2_noise[skip:skip+ns], label = 'Z')
+# ax[0].grid()
+# ax[0].legend()
+# ax[0].set_xlabel('Time [s]')
+# ax[0].set_ylabel('TDI')
 
-f, xpsd = signal.welch(x2_noise[skip:skip+ns], **kwargs)
-f, ypsd = signal.welch(y2_noise[skip:skip+ns], **kwargs)
-f, zpsd = signal.welch(z2_noise[skip:skip+ns], **kwargs)
+# f, xpsd = signal.welch(x2_noise[skip:skip+ns], **kwargs)
+# f, ypsd = signal.welch(y2_noise[skip:skip+ns], **kwargs)
+# f, zpsd = signal.welch(z2_noise[skip:skip+ns], **kwargs)
 
-ax[1].loglog(f[1:], np.sqrt(xpsd[1:]), label = 'X')
-ax[1].loglog(f[1:], np.sqrt(ypsd[1:]), label = 'Y')
-ax[1].loglog(f[1:], np.sqrt(zpsd[1:]), label = 'Z')
-ax[1].grid()
-ax[1].legend()
-ax[1].set_xlabel('Frequency [Hz]')
-ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
+# ax[1].loglog(f[1:], np.sqrt(xpsd[1:]), label = 'X')
+# ax[1].loglog(f[1:], np.sqrt(ypsd[1:]), label = 'Y')
+# ax[1].loglog(f[1:], np.sqrt(zpsd[1:]), label = 'Z')
+# ax[1].grid()
+# ax[1].legend()
+# ax[1].set_xlabel('Frequency [Hz]')
+# ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 
 # %%## 2. Apply PCI to the data
 # 
@@ -523,7 +523,6 @@ freqs, y_sec_welch_mat = compute_welch_matrix(y_sec, **kwargs)
 
 # %% # Vizualize the single-link measurements in frequency domain
 
-
 # define ordering of the MOSAs in the constellation
 mosas_order = ['12', '23', '31', '13', '21', '32']
 
@@ -575,12 +574,14 @@ sets=[np.array(xf.apply_for_channels(y_full[:ns+2*nhalf, :].T,
       for xf in filters]
 
 print("Computing single link")
-
+# Compute recovered single-link channel vectors from a set of pri-computed PCI channels using the stencil_compts.
 Ysets=[xf.compute_single_links_from_channels(iset) 
        for xf,iset in zip(filters,sets)]
 
 titles=['Y_rs'+str(order-1),'Y_rs'+str(order)]
 
+# the raw single links are the ones obtained from the secondary noises only (no laser noise suppression)
+# we're evaluating them for comparison
 if True:
     Ysets+=[y_sec[nhalf:ns+nhalf, :].T]
     titles+=['Y_raw']
@@ -590,20 +591,16 @@ channel_analysis.stationarity_plots(Ysets,
                                     title=titles)
 
 
-# %%
-
+# %% Evaluate temporal variance correlation plots for the reconstructed single links
 channel_analysis.temporal_variance_corr_plots(Ysets[:],
                                               nchan=6,
                                               title=titles)
-
-# %%
+# %% Evaluate Welch CSD matrix
 
 freqs1, y_pci1_welch_mat = compute_welch_matrix(Ysets[0].T, **kwargs)
 freqs2, y_pci2_welch_mat = compute_welch_matrix(Ysets[1].T, **kwargs)
 
-# %%
-
-# Vizualize the single-link measurements in frequency domain
+# %% Visualize the single-link measurements in frequency domain
 plotting.plotconfig(lbsize=20, lgsize=16, fsize=18, 
                     ticklabelsize=20, style='publication',
                     fontfamily = 'STIXGeneral')
@@ -638,10 +635,7 @@ fig.savefig("single-link-periodogram.pdf", format="pdf", dpi=300)
 plt.show()
 
 
-# Alternative $Y$ reconstruction
-
-# %%
-
+# %% Alternative $Y$ reconstruction
 
 def filter_single_link_data(self, ydata,n_channels=None):
     '''
@@ -671,33 +665,17 @@ def filter_single_link_data(self, ydata,n_channels=None):
 
 # %%
 
-
 Zsets=[np.array(xf.filter_single_link_data(y_full[:ns+2*nhalf, :].T, n_channels=nchannels)) for xf in filters]
 print("Comparing single link")
 diff=[Zsets[i]-Ysets[i] for i in range(order)]
 print(diff)
 
 
-# %%
-
-
-
-
-
-# %%
-
-
-
-
-
-# ## 5. Estimate sensitivity
+# %% ## 5. Estimate sensitivity
 # ### Computation of empirical response with welch periodograms
 # Based and empirical sensitivity calculation simulated signal over simulated noise as developed in initial-dev-from-pylisa
 
-# %%
-
-
-# Some options and prep for the welch_matrix calc
+# %% # Some options and prep for the welch_matrix calc
 nperseg = 1e4
 welch_kwargs = {"fs": fs,
           "window": 'blackman',
@@ -724,15 +702,12 @@ def multiple_dot(a_mat, b_mat):
     c : ndarray
         array of size p x m x k containg the dot products of all matrices
         contained in a and b.
-
-
     """
 
     return np.einsum("ijk, ikl -> ijl", a_mat, b_mat)
 
 
-# %%
-
+# %% Estimate sensitivity function
 
 def estimate_sensitivity(pci, data_n, data_gw, n_channels=6, joint=True, single_link=False, welch_kwargs=welch_kwargs):
     
