@@ -60,7 +60,7 @@ if __name__ == "__main__":
         "output_path",
         type=str,
         default=None,
-        help="Path of the configuration file",
+        help="Path of the simulation outputs folder",
     )
     
     # add optional arguments
