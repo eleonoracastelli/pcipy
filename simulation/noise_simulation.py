@@ -145,9 +145,11 @@ if __name__ == "__main__":
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
     
     # Generate new keplerian f
-    orbits = args.output_path+"keplerian-orbits.h5"
+    orbits = args.output_path+"/keplerian-orbits.h5"
     if not os.path.isfile(orbits):
-        print('**** KeplerianOrbits file not in output path folder. Generating orbit file..')
+        print('***************************************************************************')
+        print('**** KeplerianOrbits file not in output path folder. Generating orbit file.')
+        print('***************************************************************************')
         orbitsobj = KeplerianOrbits()
         orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
     
@@ -157,6 +159,9 @@ if __name__ == "__main__":
     # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)        
     # tm_asds=2.4E-15
     # laser_asds=30
+    clock_offsets=(0,0,0)
+    ranging_biases=0
+    moc_time_correlation_asds=0.42
     
     if args.baseline:
         print("*************************************************")
