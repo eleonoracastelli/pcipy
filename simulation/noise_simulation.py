@@ -147,12 +147,13 @@ if __name__ == "__main__":
     # Generate new keplerian f
     orbits = args.output_path+"keplerian-orbits.h5"
     if not os.path.isfile(orbits):
-        print('**** KeplerianOrbits file not in output path folder. Generating orbit file.')
+        print('**** KeplerianOrbits file not in output path folder. Generating orbit file..')
         orbitsobj = KeplerianOrbits()
         orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
     
     # noise parameters to turn selected noises back on
     locking='six'
+    # default parameters are commented here for reference
     # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)        
     # tm_asds=2.4E-15
     # laser_asds=30
@@ -162,6 +163,7 @@ if __name__ == "__main__":
         print("Using LISA-LCST-SGS-RP-006 baseline configuration")
         print("*************************************************")
         locking='N1-12' # default configuration used in LISA-LCST-SGS-RP-006
+        # default parameters are commented here for reference
         ranging_asds=3e-9
         ranging_b = [ranging_asds * x for x in (2, -1, -1.5, 3, 0.5, 0.75)]
         ranging_biases = dict(zip(['12', '23', '31',
