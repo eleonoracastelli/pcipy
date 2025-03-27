@@ -195,7 +195,7 @@ if __name__ == "__main__":
     print("Using {locking} locking configuration".format(locking=locking))
     print("*************************************************")
     # default parameters are commented here for reference
-    # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)
+    # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)     
     # tm_asds=2.4E-15
     # laser_asds=30
     clock_offsets=(0,0,0)
