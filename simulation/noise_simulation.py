@@ -161,7 +161,6 @@ if __name__ == "__main__":
     central_freq = 281600000000000.0
 
     # set up proper time grid for simulation
-
     pytdi_trim = 1000
     pytdi_t0 = t0 - pytdi_trim * dt
     pytdi_size = n_data + pytdi_trim
@@ -173,13 +172,13 @@ if __name__ == "__main__":
     orbits_trim = 100
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
-
+    
     if args.orbits == 'keplerian':
         OrbitsGenerator = KeplerianOrbits
     elif args.orbits == 'equalarm':
         OrbitsGenerator = EqualArmlengthOrbits
 
-    # Generate new keplerian orbits
+    # Generate new orbits
     orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
     print('***************************************************************************')
     if not os.path.isfile(orbits):
