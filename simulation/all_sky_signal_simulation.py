@@ -105,6 +105,7 @@ if __name__ == "__main__":
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
     
+<<<<<<< HEAD
     if args.orbits == 'keplerian':
         OrbitsGenerator = KeplerianOrbits
     elif args.orbits == 'equalarm':
@@ -121,6 +122,16 @@ if __name__ == "__main__":
         print('**** Selecting existing {orb} orbit file.'.format(orb=args.orbits))
     print('***************************************************************************') 
     
+=======
+    # Generate new keplerian orbits
+    orbits = args.output_path+"/keplerian-orbits.h5"
+    if not os.path.isfile(orbits):
+        print('***************************************************************************')
+        print('**** KeplerianOrbits file not in output path folder. Generating orbit file.')
+        print('***************************************************************************')
+        orbitsobj = KeplerianOrbits()
+        orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
+>>>>>>> 0193744 (Add orbit generation to all sky simulation file)
     # Instantiate GW signal class
     npix = hp.nside2npix(8)
     skymap = np.ones(npix) / np.sqrt(npix)
