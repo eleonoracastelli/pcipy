@@ -23,7 +23,9 @@ import argparse
 import logging
 import numpy as np
 import h5py
+import os
 from datetime import datetime
+from lisaorbits import KeplerianOrbits
 from lisagwresponse import StochasticPointSource
 from lisagwresponse.psd import white_generator
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
@@ -95,13 +97,14 @@ if __name__ == "__main__":
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
     
-    # Choose orbit file
-    # orbits = "/data/jgbaker/software/pylisa/data/keplerian-orbits.h5"
-    datadir = "/Users/ecastel2/Documents/research/GSFC/simulation-tests/orbits/"
-    orbits = datadir+"keplerian-orbits.h5" # datadir + 'new-orbits.h5' #
-    
-    with h5py.File(orbits) as f:
-        orbit_t0 = f.attrs['t0']
+    # Generate new keplerian f
+    orbits = args.output_path+"/keplerian-orbits.h5"
+    if not os.path.isfile(orbits):
+        print('***************************************************************************')
+        print('**** KeplerianOrbits file not in output path folder. Generating orbit file.')
+        print('***************************************************************************')
+        orbitsobj = KeplerianOrbits()
+        orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
     
     
     # Instantiate GW signal class
