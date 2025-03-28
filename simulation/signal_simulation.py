@@ -138,10 +138,13 @@ if __name__ == "__main__":
     
     # Compute and save the GW response
     gw_file = args.output_path + '/' + dt_string + 'gw_measurements_'+str(int(fs))+'Hz.h5'
+<<<<<<< HEAD
     try:
         os.remove(gw_file)
     except FileNotFoundError:
         pass
+=======
+>>>>>>> 9b5f3ca (Fix typos)
     src_class.write(gw_file,   
                     dt=dt, 
                     size=n_data, 
@@ -165,11 +168,15 @@ if __name__ == "__main__":
         z_signal = Z_data(data_signal.measurements)
     
         path = args.output_path + '/' + dt_string + 'gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
+<<<<<<< HEAD
         try:
             os.remove(path)
         except FileNotFoundError:
             pass
         hdf5 = h5py.File(path, 'w')
+=======
+        hdf5 = h5py.File(path, 'a')
+>>>>>>> 9b5f3ca (Fix typos)
         hdf5.create_dataset('x', data=x_signal)
         hdf5.create_dataset('y', data=y_signal)
         hdf5.create_dataset('z', data=z_signal)

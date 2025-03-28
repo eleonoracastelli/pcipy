@@ -181,6 +181,7 @@ if __name__ == "__main__":
     # Generate new orbits
     orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
     print('***************************************************************************')
+
     if not os.path.isfile(orbits):
         print("**** Orbits file not found. Generating {orb} orbit file.".format(orb=args.orbits))
         orbitsobj = OrbitsGenerator()
