@@ -11,6 +11,7 @@ import logging
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 from scipy import signal
 from datetime import datetime
 from lisainstrument import Instrument
@@ -18,75 +19,31 @@ from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
 from pytdi import Data
 
-# if __name__ == "__main__":
+# %% 
 
-#     # To print the logs
+# To print the logs
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-#     # # For parallelization
-#     # from mpi4py import MPI
-#     # from schwimmbad import MPIPool
+# create figure objects
+figs = []
 
-#     # Configure program arguments.
-#     parser = argparse.ArgumentParser(
-#         description="A wrapper script to run ptemcee's using mpirun"
-#     )
-    
-#     # add positional argument
-#     parser.add_argument(
-#         "output_path",
-#         type=str,
-#         default=None,
-#         help="Path of the configuration file",
-#     )
-    
-#     # add optional arguments
-#     parser.add_argument(
-#         "-dt",
-#         "--dt",
-#         type=float,
-#         default=1/4,
-#         help="Sampling time",
-#     )
+# define function to export figures to pdf 
+# pp = PdfPages('simulation_consolidation_plots.pdf')
 
-#     parser.add_argument(
-#         "-f1",
-#         "--freq1",
-#         type=float,
-#         default=1.1,
-#         help="Kaiser filter first transition frequency (Hz)",
-#     )
+# %%
+plt.figure(figsize=(10, 8)) 
 
-#     parser.add_argument(
-#         "-f2",
-#         "--freq2",
-#         type=float,
-#         default=2.9,
-#         help="Kaiser filter second transition frequency (Hz)",
-#     )
+plt.axis('off')
+plt.text(0.5,0.6,"Plots from simulation_consolidation.py.",ha='center',va='top')
+plt.text(0.3, 0.45,'''3 days of only noise simulation.
+Different noise configurations (laser + tm + oms noise) vs (baseline).
+Keplerian orbits, with comparison of old vs new orbit files.
+Refer to plot caption for more details.''',
+         ha='left',va='bottom')
+# pp.savefig()
+# plt.close()
     
-#     parser.add_argument(
-#         "-tdi",
-#         "--tdi",
-#         default=None, 
-#         choices=[None,'1','2'],
-#         help="Pass TDI generation: choice between 1 and 2",
-#     )
-
-#     parser.add_argument(
-#         "-b",
-#         "--baseline",
-#         action="store_true",
-#         help="Implement baseline simulation configuration from LISA-LCST-SGS-RP-006",
-#     )
-    
-#     parser.add_argument(
-#         "-i",
-#         "--individual",
-#         action="store_true",
-#         help="Save all secondary noises as individual noise sources",
-#     )
 
 
 # %%
@@ -108,7 +65,6 @@ central_freq = 281600000000000.0
 
 
 X, Y, Z = X2, Y2, Z2
-
 
 # %% set up proper time grid for simulation
 
@@ -146,6 +102,7 @@ elif EQUAL_ORBITS:
     orbitsobj = EqualArmlengthOrbits()
     orbits = datadir+"new-equal-orbits.h5"
     orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
+del orbitsobj
 
 # %% ###################
 # Old orbits
@@ -210,7 +167,8 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-ax[0].set_title('Old orbits')
+ 
+ax[0].set_title('Laser + tm + oms noise - old orbit file')
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -239,7 +197,9 @@ ax[1].legend()
 # ax[1].set_xlim([1e-5, 1e-1])
 # ax[1].set_ylim([1e-25, 1e-17])
 ax[1].set_xlabel('Frequency [Hz]')
-ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
+# pp.savefig(fig)
+
 
 
 # %% ###################
@@ -280,7 +240,8 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-ax[0].set_title('Old orbits - more settings')
+ 
+ax[0].set_title('Laser + tm + oms noise - old orbits - full simulation settings')
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -310,6 +271,7 @@ ax[1].legend()
 # ax[1].set_ylim([1e-25, 1e-17])
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+# pp.savefig(fig)
 
 # %% ###################
 # New orbits 
@@ -349,7 +311,8 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-ax[0].set_title('New orbits')
+ 
+ax[0].set_title('Laser + tm + oms noise - new orbits')
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -379,6 +342,7 @@ ax[1].legend()
 # ax[1].set_ylim([1e-25, 1e-17])
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+# pp.savefig(fig)
 
 
 # %% disable laser noise without rerunning the simulation
@@ -405,7 +369,8 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-ax[0].set_title('New orbits - deactivate laser no rerunning')
+ 
+ax[0].set_title('Laser + tm + oms noise - new orbits - deactivate laser noise from previous sim')
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -435,6 +400,7 @@ ax[1].legend()
 # ax[1].set_ylim([1e-25, 1e-17])
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+# pp.savefig(fig)
 
 
 # %% Individual noise contributions
@@ -444,7 +410,7 @@ print("Saving individual noise contribution")
 noises = ['oms', 'test-mass']
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-
+ 
 sumpsd = np.ndarray(xpsd.shape)
 
 for nn in noises:
@@ -483,7 +449,7 @@ for nn in noises:
 
 # fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 
-    ax[0].set_title('Keplerian orbits - individual noises')
+    ax[0].set_title('Laser + tm + oms noise - new orbits - individual noises')
     ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X {nn}'.format(nn=nn), alpha = 0.5)
     # ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
     # ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -513,6 +479,7 @@ for nn in noises:
     # ax[1].set_ylim([5e-27, 5e-17])
     ax[1].set_xlabel('Frequency [Hz]')
     ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+    # pp.savefig(fig)
  
     sumpsd += xpsd
 
@@ -552,7 +519,8 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-ax[0].set_title('New orbits - only tm and oms')
+ 
+ax[0].set_title('Laser + tm + oms noise - new orbits - only tm and oms')
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -582,12 +550,13 @@ ax[1].legend()
 # ax[1].set_ylim([5e-27, 5e-12])
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+# pp.savefig(fig)
 
 
 # %%
 
 fig, ax = plt.subplots(1, 1, figsize=(10, 6), sharex = False)
-
+ax.set_title('Laser + tm + oms noise - new orbits')
 ax.loglog(f[1:], np.sqrt(xpsd[1:]), label = 'TDI X (tm + oms)')
 ax.loglog(f[1:], np.sqrt(sumpsd[1:]), label = 'TDI X tm + TDI X oms')
 ax.grid()
@@ -596,6 +565,7 @@ ax.legend()
 ax.set_ylim([5e-27, 5e-17])
 ax.set_xlabel('Frequency [Hz]')
 ax.set_ylabel(r'$S_\text{TDI}(f)$') 
+# pp.savefig(fig)
 
 
 # %%
@@ -638,8 +608,8 @@ for nn in noises:
     tdi_times = np.arange(n_data)*dt
 
     fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-
-    ax[0].set_title('Keplerian orbits - {nn} noise'.format(nn=nn))
+     
+    ax[0].set_title('Laser + tm + oms noise - new orbits - {nn} noise'.format(nn=nn))
     ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
     ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
     ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -669,7 +639,7 @@ for nn in noises:
     ax[1].set_ylim([5e-27, 5e-17])
     ax[1].set_xlabel('Frequency [Hz]')
     ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
-
+    # pp.savefig(fig)
 
 # %% New orbits - baseline simulation
 ########################
@@ -707,7 +677,9 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-ax[0].set_title('New orbits - baseline simulation')
+ 
+
+ax[0].set_title('Baseline noises - new orbits')
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -737,6 +709,7 @@ ax[1].legend()
 # ax[1].set_ylim([5e-27, 5e-12])
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+# pp.savefig(fig)
 
 # %%
 # Disable all noises
@@ -758,7 +731,9 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-ax[0].set_title('New orbits - baseline simulation only secondary noises')
+ 
+
+ax[0].set_title('Baseline noises - new orbits - only secondary noises')
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -788,6 +763,7 @@ ax[1].legend()
 # ax[1].set_ylim([5e-27, 5e-12])
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+# pp.savefig(fig)
 
 
 # %%
@@ -798,7 +774,7 @@ print("Saving individual noise contribution")
 noises = ['laser', 'test-mass', 'oms', 'ranging', 'backlink', 'clock', 'modulation']
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
-
+ 
 sumpsd = np.ndarray(xpsd.shape)
 
 for nn in noises:
@@ -837,7 +813,7 @@ for nn in noises:
 
 # fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 
-    ax[0].set_title('Keplerian orbits - baseline simulation individual noises')
+    ax[0].set_title('Baseline noises - new orbits - individual noises')
     ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X {nn}'.format(nn=nn), alpha = 0.5)
     # ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
     # ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -867,13 +843,15 @@ for nn in noises:
     # ax[1].set_ylim([5e-27, 5e-17])
     ax[1].set_xlabel('Frequency [Hz]')
     ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+    # pp.savefig(fig)
  
     sumpsd += xpsd
     
     
 # %%
 fig, ax = plt.subplots(1, 1, figsize=(10, 6), sharex = False)
-
+ 
+ax.set_title('Baseline noises - new orbits')
 ax.loglog(f[1:], np.sqrt(xpsdsec[1:]), label = 'TDI X baseline secondary noises')
 ax.loglog(f[1:], np.sqrt(sumpsd[1:]), label = 'sum of all TDI X noise individual contributions')
 ax.grid()
@@ -882,3 +860,7 @@ ax.legend()
 ax.set_ylim([5e-27, 5e-17])
 ax.set_xlabel('Frequency [Hz]')
 ax.set_ylabel(r'$S_\text{TDI}(f)$') 
+# pp.savefig(fig)
+
+# %%
+# pp.close()
