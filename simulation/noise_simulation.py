@@ -144,7 +144,7 @@ if __name__ == "__main__":
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
     
-    # Generate new keplerian f
+    # Generate new keplerian orbits
     orbits = args.output_path+"/keplerian-orbits.h5"
     if not os.path.isfile(orbits):
         print('***************************************************************************')
