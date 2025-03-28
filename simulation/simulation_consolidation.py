@@ -21,7 +21,6 @@ from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
 from pytdi import Data
 
-<<<<<<< HEAD
 # %% 
 
 # To print the logs
@@ -49,73 +48,31 @@ Refer to plot caption for more details.''',
     
 # if __name__ == "__main__":
 
-#     # To print the logs
+# %% 
+
+# To print the logs
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-#     # # For parallelization
-#     # from mpi4py import MPI
-#     # from schwimmbad import MPIPool
+# create figure objects
+figs = []
 
-#     # Configure program arguments.
-#     parser = argparse.ArgumentParser(
-#         description="A wrapper script to run ptemcee's using mpirun"
-#     )
-    
-#     # add positional argument
-#     parser.add_argument(
-#         "output_path",
-#         type=str,
-#         default=None,
-#         help="Path of the configuration file",
-#     )
-    
-#     # add optional arguments
-#     parser.add_argument(
-#         "-dt",
-#         "--dt",
-#         type=float,
-#         default=1/4,
-#         help="Sampling time",
-#     )
+# define function to export figures to pdf 
+# pp = PdfPages('simulation_consolidation_plots.pdf')
 
-#     parser.add_argument(
-#         "-f1",
-#         "--freq1",
-#         type=float,
-#         default=1.1,
-#         help="Kaiser filter first transition frequency (Hz)",
-#     )
+# %%
+plt.figure(figsize=(10, 8)) 
 
-#     parser.add_argument(
-#         "-f2",
-#         "--freq2",
-#         type=float,
-#         default=2.9,
-#         help="Kaiser filter second transition frequency (Hz)",
-#     )
+plt.axis('off')
+plt.text(0.5,0.6,"Plots from simulation_consolidation.py.",ha='center',va='top')
+plt.text(0.3, 0.45,'''3 days of only noise simulation.
+Different noise configurations (laser + tm + oms noise) vs (baseline).
+Keplerian orbits, with comparison of old vs new orbit files.
+Refer to plot caption for more details.''',
+         ha='left',va='bottom')
+# pp.savefig()
+# plt.close()
     
-#     parser.add_argument(
-#         "-tdi",
-#         "--tdi",
-#         default=None, 
-#         choices=[None,'1','2'],
-#         help="Pass TDI generation: choice between 1 and 2",
-#     )
-
-#     parser.add_argument(
-#         "-b",
-#         "--baseline",
-#         action="store_true",
-#         help="Implement baseline simulation configuration from LISA-LCST-SGS-RP-006",
-#     )
-    
-#     parser.add_argument(
-#         "-i",
-#         "--individual",
-#         action="store_true",
-#         help="Save all secondary noises as individual noise sources",
-#     )
 
 
 # %%
@@ -138,10 +95,6 @@ central_freq = 281600000000000.0
 
 X, Y, Z = X2, Y2, Z2
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
 # %% set up proper time grid for simulation
 
 pytdi_trim = 1000
@@ -178,10 +131,9 @@ elif EQUAL_ORBITS:
     orbitsobj = EqualArmlengthOrbits()
     orbits = datadir+"new-equal-orbits.h5"
     orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
-<<<<<<< HEAD
+
 del orbitsobj
-=======
->>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+
 
 # %% ###################
 # Old orbits
@@ -247,11 +199,16 @@ tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 ax[0].set_title('Laser + tm + oms noise - old orbit file')
 =======
 ax[0].set_title('Old orbits')
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+ax[0].set_title('Laser + tm + oms noise - old orbit file')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -281,12 +238,18 @@ ax[1].legend()
 # ax[1].set_ylim([1e-25, 1e-17])
 ax[1].set_xlabel('Frequency [Hz]')
 <<<<<<< HEAD
+<<<<<<< HEAD
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 # pp.savefig(fig)
 
 =======
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
+# pp.savefig(fig)
+
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 
 
 # %% ###################
@@ -328,11 +291,16 @@ tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 ax[0].set_title('Laser + tm + oms noise - old orbits - full simulation settings')
 =======
 ax[0].set_title('Old orbits - more settings')
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+ax[0].set_title('Laser + tm + oms noise - old orbits - full simulation settings')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -363,9 +331,13 @@ ax[1].legend()
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # pp.savefig(fig)
 =======
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+# pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 
 # %% ###################
 # New orbits 
@@ -406,11 +378,16 @@ tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 ax[0].set_title('Laser + tm + oms noise - new orbits')
 =======
 ax[0].set_title('New orbits')
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+ax[0].set_title('Laser + tm + oms noise - new orbits')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -441,9 +418,13 @@ ax[1].legend()
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # pp.savefig(fig)
 =======
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+# pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 
 
 # %% disable laser noise without rerunning the simulation
@@ -471,11 +452,16 @@ tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 ax[0].set_title('Laser + tm + oms noise - new orbits - deactivate laser noise from previous sim')
 =======
 ax[0].set_title('New orbits - deactivate laser no rerunning')
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+ax[0].set_title('Laser + tm + oms noise - new orbits - deactivate laser noise from previous sim')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -506,9 +492,13 @@ ax[1].legend()
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # pp.savefig(fig)
 =======
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+# pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 
 
 # %% Individual noise contributions
@@ -519,10 +509,14 @@ noises = ['oms', 'test-mass']
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 =======
 
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 sumpsd = np.ndarray(xpsd.shape)
 
 for nn in noises:
@@ -562,10 +556,14 @@ for nn in noises:
 # fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     ax[0].set_title('Laser + tm + oms noise - new orbits - individual noises')
 =======
     ax[0].set_title('Keplerian orbits - individual noises')
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+    ax[0].set_title('Laser + tm + oms noise - new orbits - individual noises')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
     ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X {nn}'.format(nn=nn), alpha = 0.5)
     # ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
     # ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -596,9 +594,13 @@ for nn in noises:
     ax[1].set_xlabel('Frequency [Hz]')
     ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
     # pp.savefig(fig)
 =======
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+    # pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
  
     sumpsd += xpsd
 
@@ -639,11 +641,16 @@ tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 ax[0].set_title('Laser + tm + oms noise - new orbits - only tm and oms')
 =======
 ax[0].set_title('New orbits - only tm and oms')
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+ax[0].set_title('Laser + tm + oms noise - new orbits - only tm and oms')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -674,19 +681,27 @@ ax[1].legend()
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # pp.savefig(fig)
 =======
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+# pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 
 
 # %%
 
 fig, ax = plt.subplots(1, 1, figsize=(10, 6), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
 ax.set_title('Laser + tm + oms noise - new orbits')
 =======
 
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ax.set_title('Laser + tm + oms noise - new orbits')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax.loglog(f[1:], np.sqrt(xpsd[1:]), label = 'TDI X (tm + oms)')
 ax.loglog(f[1:], np.sqrt(sumpsd[1:]), label = 'TDI X tm + TDI X oms')
 ax.grid()
@@ -696,9 +711,13 @@ ax.set_ylim([5e-27, 5e-17])
 ax.set_xlabel('Frequency [Hz]')
 ax.set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # pp.savefig(fig)
 =======
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+# pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 
 
 # %%
@@ -742,12 +761,17 @@ for nn in noises:
 
     fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
      
     ax[0].set_title('Laser + tm + oms noise - new orbits - {nn} noise'.format(nn=nn))
 =======
 
     ax[0].set_title('Keplerian orbits - {nn} noise'.format(nn=nn))
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+     
+    ax[0].set_title('Laser + tm + oms noise - new orbits - {nn} noise'.format(nn=nn))
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
     ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
     ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
     ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -778,10 +802,14 @@ for nn in noises:
     ax[1].set_xlabel('Frequency [Hz]')
     ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
     # pp.savefig(fig)
 =======
 
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+    # pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 
 # %% New orbits - baseline simulation
 ########################
@@ -820,12 +848,18 @@ tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 
 ax[0].set_title('Baseline noises - new orbits')
 =======
 ax[0].set_title('New orbits - baseline simulation')
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+
+ax[0].set_title('Baseline noises - new orbits')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -856,9 +890,13 @@ ax[1].legend()
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # pp.savefig(fig)
 =======
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+# pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 
 # %%
 # Disable all noises
@@ -881,12 +919,18 @@ tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 
 ax[0].set_title('Baseline noises - new orbits - only secondary noises')
 =======
 ax[0].set_title('New orbits - baseline simulation only secondary noises')
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+
+ax[0].set_title('Baseline noises - new orbits - only secondary noises')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
 ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -917,9 +961,13 @@ ax[1].legend()
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # pp.savefig(fig)
 =======
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+# pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 
 
 # %%
@@ -931,10 +979,14 @@ noises = ['laser', 'test-mass', 'oms', 'ranging', 'backlink', 'clock', 'modulati
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 =======
 
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 sumpsd = np.ndarray(xpsd.shape)
 
 for nn in noises:
@@ -974,10 +1026,14 @@ for nn in noises:
 # fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     ax[0].set_title('Baseline noises - new orbits - individual noises')
 =======
     ax[0].set_title('Keplerian orbits - baseline simulation individual noises')
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+    ax[0].set_title('Baseline noises - new orbits - individual noises')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
     ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X {nn}'.format(nn=nn), alpha = 0.5)
     # ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
     # ax[0].plot(tdi_times, z_noise[pytdi_trim:], label = 'Z', alpha = 0.5)
@@ -1008,9 +1064,13 @@ for nn in noises:
     ax[1].set_xlabel('Frequency [Hz]')
     ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
 <<<<<<< HEAD
+<<<<<<< HEAD
     # pp.savefig(fig)
 =======
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+    # pp.savefig(fig)
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
  
     sumpsd += xpsd
     
@@ -1018,11 +1078,16 @@ for nn in noises:
 # %%
 fig, ax = plt.subplots(1, 1, figsize=(10, 6), sharex = False)
 <<<<<<< HEAD
+<<<<<<< HEAD
  
 ax.set_title('Baseline noises - new orbits')
 =======
 
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+ 
+ax.set_title('Baseline noises - new orbits')
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax.loglog(f[1:], np.sqrt(xpsdsec[1:]), label = 'TDI X baseline secondary noises')
 ax.loglog(f[1:], np.sqrt(sumpsd[1:]), label = 'sum of all TDI X noise individual contributions')
 ax.grid()
@@ -1031,10 +1096,14 @@ ax.legend()
 ax.set_ylim([5e-27, 5e-17])
 ax.set_xlabel('Frequency [Hz]')
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
 ax.set_ylabel(r'$S_\text{TDI}(f)$') 
 # pp.savefig(fig)
 
 # %%
+<<<<<<< HEAD
 # pp.close()
 
 
@@ -1042,3 +1111,6 @@ ax.set_ylabel(r'$S_\text{TDI}(f)$')
 =======
 ax.set_ylabel(r'$S_\text{TDI}(f)$') 
 >>>>>>> 8de550e (Add simulation consolidation script with all plots for Issue #23)
+=======
+# pp.close()
+>>>>>>> 2b5f603 (Update simulation consolidation script with all plots for Issue #23)
