@@ -113,7 +113,7 @@ if __name__ == "__main__":
                                       gw_beta=np.pi/2, 
                                       gw_lambda=np.pi/2,
                                       dt = dt,
-                                      t0 = 1000 + orbit_t0, 
+                                      t0 = instrument_t0, 
                                       size=n_data)
 
     # Choose files' prefixes
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     src_class.write(gw_file,   
                     dt=dt, 
                     size=n_data, 
-                    t0 = 1000 + orbit_t0)
+                    t0 = instrument_t0)
        
     #  Get data from GW simulation    
     if args.tdi:
