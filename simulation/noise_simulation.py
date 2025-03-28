@@ -35,8 +35,11 @@ Usage:
 import argparse
 import logging
 import h5py
+import os
+import numpy as np
 from datetime import datetime
 from lisainstrument import Instrument
+from lisaorbits import KeplerianOrbits
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
 from pytdi import Data
 
@@ -60,7 +63,7 @@ if __name__ == "__main__":
         "output_path",
         type=str,
         default=None,
-        help="Path of the configuration file",
+        help="Path of the simulation outputs folder",
     )
     
     # add optional arguments
@@ -116,6 +119,9 @@ if __name__ == "__main__":
     dt = args.dt
     # Sampling frequency
     fs = 1 / dt
+    # t0
+    t0 = 2173211130.0 # s  datetime.datetime(2038, 11, 12, 16, 45, 30)
+
     # Data size: 24 hours or 2 days
     tobs = 3 * 24 * 3600
     n_data = int(tobs * fs)
@@ -124,27 +130,45 @@ if __name__ == "__main__":
     # Central frequency
     central_freq = 281600000000000.0
 
-    # Choose orbit file
-    # TO DO double check that the keplerian orbits match the orbits simulation 
-    # parameters in LISA-LCST-SGS-RP-006 
-    datadir = '/Users/ecastel2/Documents/research/GSFC/simulation-tests/orbits/'
-    orbits = datadir+"keplerian-orbits.h5"
-    # orbits = "/work/SC/lisa/baghiq/orbits/keplerian-orbits.h5"
-    with h5py.File(orbits) as f:
-        orbit_t0 = f.attrs['t0']
+    # set up proper time grid for simulation
     
+    pytdi_trim = 1000
+    pytdi_t0 = t0 - pytdi_trim * dt
+    pytdi_size = n_data + pytdi_trim
+
+    instrument_t0 = pytdi_t0
+    instrument_size = pytdi_size
+
+    orbits_dt = 100_000
+    orbits_trim = 100
+    orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
+    orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
+    
+    # Generate new keplerian orbits
+    orbits = args.output_path+"/keplerian-orbits.h5"
+    if not os.path.isfile(orbits):
+        print('***************************************************************************')
+        print('**** KeplerianOrbits file not in output path folder. Generating orbit file.')
+        print('***************************************************************************')
+        orbitsobj = KeplerianOrbits()
+        orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
     
     # noise parameters to turn selected noises back on
     locking='six'
+    # default parameters are commented here for reference
     # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)        
     # tm_asds=2.4E-15
     # laser_asds=30
+    clock_offsets=(0,0,0)
+    ranging_biases=0
+    moc_time_correlation_asds=0.42
     
     if args.baseline:
         print("*************************************************")
         print("Using LISA-LCST-SGS-RP-006 baseline configuration")
         print("*************************************************")
         locking='N1-12' # default configuration used in LISA-LCST-SGS-RP-006
+        # default parameters are commented here for reference
         ranging_asds=3e-9
         ranging_b = [ranging_asds * x for x in (2, -1, -1.5, 3, 0.5, 0.75)]
         ranging_biases = dict(zip(['12', '23', '31',
@@ -163,7 +187,7 @@ if __name__ == "__main__":
     # Instantiate LISA instrument
     instr = Instrument(size=n_data,
                         dt=dt,
-                        t0=1000 + orbit_t0, 
+                        t0=instrument_t0, 
                         lock=locking, 
                         orbits=orbits, 
                         aafilter=('kaiser', 240, args.freq1, args.freq2),
@@ -224,7 +248,7 @@ if __name__ == "__main__":
         instr = Instrument(seed=simseed,
                            size=n_data,
                             dt=dt,
-                            t0=1000 + orbit_t0,
+                            t0=instrument_t0, 
                             lock=locking, 
                             orbits=orbits, 
                             aafilter=('kaiser', 240, args.freq1, args.freq2),
@@ -283,7 +307,7 @@ if __name__ == "__main__":
             instr = Instrument(seed=simseed,
                                size=n_data,
                                 dt=dt,
-                                t0=1000 + orbit_t0,
+                                t0=instrument_t0, 
                                 lock=locking, 
                                 orbits=orbits, 
                                 aafilter=('kaiser', 240, args.freq1, args.freq2))
@@ -299,7 +323,7 @@ if __name__ == "__main__":
                 instr = Instrument(seed=simseed,
                                    size=n_data,
                                     dt=dt,
-                                    t0=1000 + orbit_t0,
+                                    t0=instrument_t0, 
                                     lock=locking, 
                                     orbits=orbits, 
                                     aafilter=('kaiser', 240, args.freq1, args.freq2),
