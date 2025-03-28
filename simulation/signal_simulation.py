@@ -97,7 +97,7 @@ if __name__ == "__main__":
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
     
-    # Generate new keplerian f
+    # Generate new keplerian orbits
     orbits = args.output_path+"/keplerian-orbits.h5"
     if not os.path.isfile(orbits):
         print('***************************************************************************')
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     dt_string = now.strftime("%Y-%m-%d_%Hh%M_")
     
     # Compute and save the GW response
-    gw_file = args.output_path + '/' + dt_string + 'point_gw_measurements_'+str(int(fs))+'Hz.h5'
+    gw_file = args.output_path + '/' + dt_string + 'gw_measurements_'+str(int(fs))+'Hz.h5'
     src_class.write(gw_file,   
                     dt=dt, 
                     size=n_data, 
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         y_signal = Y_data(data_signal.measurements)
         z_signal = Z_data(data_signal.measurements)
     
-        path = args.output_path + '/' + dt_string + 'point_gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
+        path = args.output_path + '/' + dt_string + 'gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
         hdf5 = h5py.File(path, 'a')
         hdf5.create_dataset('x', data=x_signal)
         hdf5.create_dataset('y', data=y_signal)
