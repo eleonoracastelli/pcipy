@@ -115,6 +115,14 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-orb",
+        "--orbits",
+        default='keplerian', 
+        choices=['keplerian','equalarm'],
+        help="Choose orbit type",
+    )
+    
+    parser.add_argument(
         "-tdi",
         "--tdi",
         default=None,
