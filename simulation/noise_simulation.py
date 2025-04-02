@@ -160,12 +160,14 @@ if __name__ == "__main__":
         
     # Generate new keplerian orbits
     orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
+    print('***************************************************************************')
     if not os.path.isfile(orbits):
-        print('***************************************************************************')
         print('**** Orbits file not in output path folder. Generating {orb} orbit file.'.format(orb=args.orbits))
-        print('***************************************************************************')
         orbitsobj = OrbitsGenerator()
         orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
+    else:
+        print('**** Selecting existing {orb} orbit file.'.format(orb=args.orbits))
+    print('***************************************************************************')        
     
     # noise parameters to turn selected noises back on
     locking='six'
