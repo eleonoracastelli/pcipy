@@ -188,10 +188,13 @@ if __name__ == "__main__":
 
     # Generate new orbits
     orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
-    print('***************************************************************************')
-
+        
+    # Generate new keplerian orbits
+    orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
     if not os.path.isfile(orbits):
-        print("**** Orbits file not found. Generating {orb} orbit file.".format(orb=args.orbits))
+        print('***************************************************************************')
+        print('**** Orbits file not in output path folder. Generating {orb} orbit file.'.format(orb=args.orbits))
+        print('***************************************************************************')
         orbitsobj = OrbitsGenerator()
         orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
     else:
