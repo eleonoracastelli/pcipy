@@ -143,6 +143,13 @@ if __name__ == "__main__":
         action="store_true",
         help="Save all secondary noises as individual noise sources",
     )
+    
+    parser.add_argument(
+        "-c",
+        "--combined",
+        action="store_true",
+        help="Save acombinations of laser noise + some individual noise sources",
+    )
 
     parser.add_argument(
         "-c",
