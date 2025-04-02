@@ -120,10 +120,6 @@ if __name__ == "__main__":
     else:
         print('**** Selecting existing {orb} orbit file.'.format(orb=args.orbits))
     print('***************************************************************************') 
-<<<<<<< HEAD
-=======
-    
->>>>>>> 181eae7 (Add orbit generation code for equal armlength orbits)
     
     # Instantiate GW signal class
     src_class = StochasticPointSource(white_generator(1),  #white_noise_generator_at_1,  
@@ -140,6 +136,7 @@ if __name__ == "__main__":
     dt_string = now.strftime("%Y-%m-%d_") + args.orbits + '_'
     
     # Compute and save the GW response
+<<<<<<< HEAD
     gw_file = args.output_path + '/' + dt_string + 'gw_measurements_'+str(int(fs))+'Hz.h5'
 <<<<<<< HEAD
     try:
@@ -148,6 +145,9 @@ if __name__ == "__main__":
         pass
 =======
 >>>>>>> 9b5f3ca (Fix typos)
+=======
+    gw_file = args.output_path + '/' + args.orbits + dt_string + 'gw_measurements_'+str(int(fs))+'Hz.h5'
+>>>>>>> 106f917 (Change file naming strings for signal script)
     src_class.write(gw_file,   
                     dt=dt, 
                     size=n_data, 
@@ -170,6 +170,7 @@ if __name__ == "__main__":
         y_signal = Y_data(data_signal.measurements)
         z_signal = Z_data(data_signal.measurements)
     
+<<<<<<< HEAD
         path = args.output_path + '/' + dt_string + 'gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
 <<<<<<< HEAD
         try:
@@ -178,6 +179,9 @@ if __name__ == "__main__":
             pass
         hdf5 = h5py.File(path, 'w')
 =======
+=======
+        path = args.output_path + '/' + args.orbits + dt_string + 'gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
+>>>>>>> 106f917 (Change file naming strings for signal script)
         hdf5 = h5py.File(path, 'a')
 >>>>>>> 9b5f3ca (Fix typos)
         hdf5.create_dataset('x', data=x_signal)
