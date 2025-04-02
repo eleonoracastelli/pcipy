@@ -25,7 +25,7 @@ import numpy as np
 import h5py
 import os
 from datetime import datetime
-from lisaorbits import KeplerianOrbits
+from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 from lisagwresponse import StochasticPointSource
 from lisagwresponse.psd import white_generator
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
@@ -105,14 +105,21 @@ if __name__ == "__main__":
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
     
+    if args.orbits == 'keplerian':
+        OrbitsGenerator = KeplerianOrbits
+    elif args.orbits == 'equalarm':
+        OrbitsGenerator = EqualArmlengthOrbits
+        
     # Generate new keplerian orbits
-    orbits = args.output_path+"/keplerian-orbits.h5"
+    orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
+    print('***************************************************************************')
     if not os.path.isfile(orbits):
-        print('***************************************************************************')
-        print('**** KeplerianOrbits file not in output path folder. Generating orbit file.')
-        print('***************************************************************************')
-        orbitsobj = KeplerianOrbits()
+        print('**** Orbits file not in output path folder. Generating {orb} orbit file.'.format(orb=args.orbits))
+        orbitsobj = OrbitsGenerator()
         orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
+    else:
+        print('**** Selecting existing {orb} orbit file.'.format(orb=args.orbits))
+    print('***************************************************************************') 
     
     
     # Instantiate GW signal class
