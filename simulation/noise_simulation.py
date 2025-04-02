@@ -120,6 +120,13 @@ if __name__ == "__main__":
         action="store_true",
         help="Save all secondary noises as individual noise sources",
     )
+    
+    parser.add_argument(
+        "-c",
+        "--combined",
+        action="store_true",
+        help="Save acombinations of laser noise + some individual noise sources",
+    )
 
     # Parse the input.
     args = parser.parse_args()
@@ -351,6 +358,44 @@ if __name__ == "__main__":
                 instr.simulate()
                 instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
             
+        if args.combined:
+            print("Saving combined noise contribution")
+            
+            noises = ['test-mass', 'oms']
+            
+            for n in noises:
+                # Instantiate LISA instrument
+                instr = Instrument(seed=simseed,
+                                   size=n_data,
+                                    dt=dt,
+                                    t0=instrument_t0, 
+                                    lock=locking, 
+                                    orbits=orbits, 
+                                    aafilter=('kaiser', 240, args.freq1, args.freq2))
+                        
+                instr.disable_all_noises(excluding=["laser", n]) 
+                instr.simulate()
+                instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
+           
+            if args.baseline:
+                noises = ['ranging', 'backlink', 'clock', 'modulation']
+                for n in noises:
+                    # Instantiate LISA instrument
+                    instr = Instrument(seed=simseed,
+                                       size=n_data,
+                                        dt=dt,
+                                        t0=instrument_t0, 
+                                        lock=locking, 
+                                        orbits=orbits, 
+                                        aafilter=('kaiser', 240, args.freq1, args.freq2),
+                                        clock_offsets={'1':clock_offsets[0],'2':clock_offsets[1],'3':clock_offsets[2]},
+                                        ranging_biases= ranging_biases,
+                                        moc_time_correlation_asds = moc_time_correlation_asds)
+                            
+                    instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n]) 
+                    instr.simulate()
+                    instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
+                
             
 
                 
