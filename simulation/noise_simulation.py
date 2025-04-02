@@ -262,11 +262,13 @@ if __name__ == "__main__":
     # datetime object containing current date and time
     now = datetime.now()
     # # dd/mm/YY H:M:S
+    
     lockstr = '_locking_'+locking+'_'
 
     dt_string = now.strftime("%Y-%m-%d_") + args.orbits  +  lockstr + 'laser_tm_oms_'
 
     writepath = args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5'
+
     # Simulate and save data
     # check if file exists and delete it otherwise
     try:
