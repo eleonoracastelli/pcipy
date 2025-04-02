@@ -26,7 +26,6 @@ import h5py
 import os
 from datetime import datetime
 from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
-
 from lisagwresponse import StochasticPointSource
 from lisagwresponse.psd import white_generator
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
@@ -121,6 +120,10 @@ if __name__ == "__main__":
     else:
         print('**** Selecting existing {orb} orbit file.'.format(orb=args.orbits))
     print('***************************************************************************') 
+<<<<<<< HEAD
+=======
+    
+>>>>>>> 181eae7 (Add orbit generation code for equal armlength orbits)
     
     # Instantiate GW signal class
     src_class = StochasticPointSource(white_generator(1),  #white_noise_generator_at_1,  
