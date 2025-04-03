@@ -269,9 +269,8 @@ if __name__ == "__main__":
     # datetime object containing current date and time
     now = datetime.now()
     # # dd/mm/YY H:M:S
-    
-    lockstr = '_locking_'+locking+'_'
 
+    lockstr = '_locking_'+locking+'_'
     dt_string = now.strftime("%Y-%m-%d_") + args.orbits  +  lockstr + 'laser_tm_oms_'
 
     writepath = args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5'
@@ -348,9 +347,15 @@ if __name__ == "__main__":
         instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms',
                                             'ranging', 'backlink', 'clock', 'modulation'])
         instr.simulate()
+<<<<<<< HEAD
 
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
 
+=======
+        
+        dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
+        
+>>>>>>> 935d06d (Fix naming convention for locking)
         # Simulate and save data
         writepath = args.output_path + '/' + dt_string + 'measurements_' + str(int(fs)) + 'Hz.h5'
         try:
