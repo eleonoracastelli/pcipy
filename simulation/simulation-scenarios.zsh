@@ -61,11 +61,11 @@ fi
 if [[ "$orbits" = "equalarm" ]]
   then
     echo "Set TDI to generation 1."
-    tdiflag = 1
+    tdiflag=1
 elif [[ "$orbits" = "keplerian" ]]
   then
     echo "Set TDI to generation 2."
-    tdiflag = 2
+    tdiflag=2
 else
     echo "Orbit type is not valid, choose between equalarm or keplerian"
     exit 1
