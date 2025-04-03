@@ -61,11 +61,11 @@ class DeducedTDIFilter(LinearFilter):
         
         ioff,stencil = DeducedTDIFilter.compute_stencil_from_measurements(measurements_data,i0=i0,nleft=nleft,nright=nright)
         self.nleft = ioff
-        self.nright=len(stencil[0,0])-1
+        self.nright=len(stencil[0])-1
         self.n_input_channels=6
         self.input_names=None
         self.n_output_channels=3
-        self.stencil_compts=np.transpose(stencil,[0,2,1])
+        self.stencil_compts=stencil#np.transpose(stencil,[0,2,1])
         #print('Constructed TDI stencil of shape',self.stencil_compts.shape,' and set nleft and nright to:',self.nleft, self.nright)
         self.constant_stencil=True
         self.dt=1/measurements_data.fs
@@ -152,16 +152,16 @@ class DeducedTDIFilter(LinearFilter):
         length=last+1-first
         #print('length,first,last',length,first,last)
 
-        stencil=np.zeros((3,6,length))
+        stencil=np.zeros((3,length,6))
         for ilink in range(len(mosas_order)):
             link=mosas_order[ilink]
             for i in range(3):
-                stencil[:,ilink,:]=XYZ_1[link][:,first:last+1]
+                stencil[:,:,ilink]=XYZ_1[link][:,first:last+1]
             #print('shape change:',XYZ_1[link].shape,stencil[link].shape)
         ioff=nleft-first
         #print('ioff',ioff)
         #display(stencil)
-        return ioff, stencil    
+        return ioff, stencil[:,::-1,:]    
 
 
 

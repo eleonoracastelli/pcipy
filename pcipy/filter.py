@@ -147,17 +147,18 @@ class LinearFilter:
         #Not sure what the fastest implementation of this is
         ns=input_data.n_samples()
         ne=ns-self.nleft-self.nright
+        nwid=self.nleft+self.nright+1
         data=np.zeros((self.n_output_channels,ne))
         if method=='dot':
             for ioc in range(self.n_output_channels):
                 print(ioc,self.nleft,self.nright)
-                for i in range(1+self.nleft+self.nright):
+                for i in range(nwid):
                     data[ioc]+=np.dot(self.stencil_compts[ioc,i],input_data.data[:,i:ne+i])
         elif method=='convolve':
             for ioc in range(self.n_output_channels):
                 print(ioc,self.nleft,self.nright,self.stencil_compts.shape,input_data.data.shape)
                 for i in range(self.n_input_channels):
-                    data[ioc]+=convolve(self.stencil_compts[ioc,:,i],input_data.data[i,:],mode='valid')
+                    data[ioc]+=convolve(self.stencil_compts[ioc,:,i][::-1],input_data.data[i,:],mode='valid')
 
         else: raise ValueError('Invalid value for "method"')
         t0=self.t0
