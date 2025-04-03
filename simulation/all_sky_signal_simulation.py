@@ -137,7 +137,7 @@ if __name__ == "__main__":
     # Choose files' prefixes
     now = datetime.now()
     # dd/mm/YY H:M:S
-    dt_string = now.strftime("%Y-%m-%d_%Hh%M_")
+    dt_string = now.strftime("%Y-%m-%d_")
     
     # Compute and save the GW response
     gw_file = args.output_path + '/' + args.orbits + dt_string + 'all_sky_gw_measurements_'+str(int(fs))+'Hz.h5'

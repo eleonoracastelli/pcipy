@@ -228,7 +228,7 @@ if __name__ == "__main__":
     now = datetime.now()
     # # dd/mm/YY H:M:S
     lockstr = 'locking_n1_12_'
-    dt_string = now.strftime("%Y-%m-%d_%Hh%M_") + args.orbits +  lockstr + 'laser_tm_oms_'
+    dt_string = now.strftime("%Y-%m-%d_") + args.orbits +  lockstr + 'laser_tm_oms_'
     
     # Simulate and save data
     instr.write(args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5')
