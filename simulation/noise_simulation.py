@@ -39,7 +39,7 @@ import os
 import numpy as np
 from datetime import datetime
 from lisainstrument import Instrument
-from lisaorbits import KeplerianOrbits
+from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
 from pytdi import Data
 
@@ -92,6 +92,14 @@ if __name__ == "__main__":
     )
     
     parser.add_argument(
+        "-orb",
+        "--orbits",
+        default='keplerian', 
+        choices=['keplerian','equalarm'],
+        help="Choose orbit type",
+    )
+    
+    parser.add_argument(
         "-tdi",
         "--tdi",
         default=None, 
@@ -111,6 +119,13 @@ if __name__ == "__main__":
         "--individual",
         action="store_true",
         help="Save all secondary noises as individual noise sources",
+    )
+    
+    parser.add_argument(
+        "-c",
+        "--combined",
+        action="store_true",
+        help="Save acombinations of laser noise + some individual noise sources",
     )
 
     # Parse the input.
@@ -144,14 +159,22 @@ if __name__ == "__main__":
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
     
+    
+    if args.orbits == 'keplerian':
+        OrbitsGenerator = KeplerianOrbits
+    elif args.orbits == 'equalarm':
+        OrbitsGenerator = EqualArmlengthOrbits
+        
     # Generate new keplerian orbits
-    orbits = args.output_path+"/keplerian-orbits.h5"
+    orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
+    print('***************************************************************************')
     if not os.path.isfile(orbits):
-        print('***************************************************************************')
-        print('**** KeplerianOrbits file not in output path folder. Generating orbit file.')
-        print('***************************************************************************')
-        orbitsobj = KeplerianOrbits()
+        print('**** Orbits file not in output path folder. Generating {orb} orbit file.'.format(orb=args.orbits))
+        orbitsobj = OrbitsGenerator()
         orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
+    else:
+        print('**** Selecting existing {orb} orbit file.'.format(orb=args.orbits))
+    print('***************************************************************************')        
     
     # noise parameters to turn selected noises back on
     locking='six'
@@ -205,7 +228,7 @@ if __name__ == "__main__":
     now = datetime.now()
     # # dd/mm/YY H:M:S
     lockstr = 'locking_n1_12_'
-    dt_string = now.strftime("%Y-%m-%d_%Hh%M_") + lockstr + 'laser_tm_oms_'
+    dt_string = now.strftime("%Y-%m-%d_") + args.orbits +  lockstr + 'laser_tm_oms_'
     
     # Simulate and save data
     instr.write(args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5')
@@ -260,7 +283,7 @@ if __name__ == "__main__":
         instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', 'ranging', 'backlink', 'clock', 'modulation'])
         instr.simulate()
         
-        dt_string = now.strftime("%Y-%m-%d_%Hh%M_") + lockstr + 'baseline_'
+        dt_string = now.strftime("%Y-%m-%d_%Hh%M_") + args.orbits + lockstr + 'baseline_'
         
         # Simulate and save data
         instr.write(args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5')
@@ -335,6 +358,44 @@ if __name__ == "__main__":
                 instr.simulate()
                 instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
             
+        if args.combined:
+            print("Saving combined noise contribution")
+            
+            noises = ['test-mass', 'oms']
+            
+            for n in noises:
+                # Instantiate LISA instrument
+                instr = Instrument(seed=simseed,
+                                   size=n_data,
+                                    dt=dt,
+                                    t0=instrument_t0, 
+                                    lock=locking, 
+                                    orbits=orbits, 
+                                    aafilter=('kaiser', 240, args.freq1, args.freq2))
+                        
+                instr.disable_all_noises(excluding=["laser", n]) 
+                instr.simulate()
+                instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
+           
+            if args.baseline:
+                noises = ['ranging', 'backlink', 'clock', 'modulation']
+                for n in noises:
+                    # Instantiate LISA instrument
+                    instr = Instrument(seed=simseed,
+                                       size=n_data,
+                                        dt=dt,
+                                        t0=instrument_t0, 
+                                        lock=locking, 
+                                        orbits=orbits, 
+                                        aafilter=('kaiser', 240, args.freq1, args.freq2),
+                                        clock_offsets={'1':clock_offsets[0],'2':clock_offsets[1],'3':clock_offsets[2]},
+                                        ranging_biases= ranging_biases,
+                                        moc_time_correlation_asds = moc_time_correlation_asds)
+                            
+                    instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n]) 
+                    instr.simulate()
+                    instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
+                
             
 
                 

@@ -26,7 +26,7 @@ import healpy as hp
 import h5py
 import os
 from datetime import datetime
-from lisaorbits import KeplerianOrbits
+from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 from lisagwresponse import StochasticBackground
 from lisagwresponse.psd import white_generator
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
@@ -56,6 +56,14 @@ if __name__ == "__main__":
         type=float,
         default=1/4,
         help="Sampling time",
+    )
+    
+    parser.add_argument(
+        "-orb",
+        "--orbits",
+        default='keplerian', 
+        choices=['keplerian','equalarm'],
+        help="Choose orbit type",
     )
     
     parser.add_argument(
@@ -97,14 +105,22 @@ if __name__ == "__main__":
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
     
+    if args.orbits == 'keplerian':
+        OrbitsGenerator = KeplerianOrbits
+    elif args.orbits == 'equalarm':
+        OrbitsGenerator = EqualArmlengthOrbits
+        
     # Generate new keplerian orbits
-    orbits = args.output_path+"/keplerian-orbits.h5"
+    orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
+    print('***************************************************************************')
     if not os.path.isfile(orbits):
-        print('***************************************************************************')
-        print('**** KeplerianOrbits file not in output path folder. Generating orbit file.')
-        print('***************************************************************************')
-        orbitsobj = KeplerianOrbits()
+        print('**** Orbits file not in output path folder. Generating {orb} orbit file.'.format(orb=args.orbits))
+        orbitsobj = OrbitsGenerator()
         orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
+    else:
+        print('**** Selecting existing {orb} orbit file.'.format(orb=args.orbits))
+    print('***************************************************************************') 
+    
     # Instantiate GW signal class
     npix = hp.nside2npix(8)
     skymap = np.ones(npix) / np.sqrt(npix)
@@ -121,10 +137,10 @@ if __name__ == "__main__":
     # Choose files' prefixes
     now = datetime.now()
     # dd/mm/YY H:M:S
-    dt_string = now.strftime("%Y-%m-%d_%Hh%M_")
+    dt_string = now.strftime("%Y-%m-%d_")
     
     # Compute and save the GW response
-    gw_file = args.output_path + '/' + dt_string + 'all_sky_gw_measurements_'+str(int(fs))+'Hz.h5'
+    gw_file = args.output_path + '/' + args.orbits + dt_string + 'all_sky_gw_measurements_'+str(int(fs))+'Hz.h5'
     
     src_class.write(gw_file,
                     dt=dt, 
@@ -148,7 +164,7 @@ if __name__ == "__main__":
         y_signal = Y_data(data_signal.measurements)
         z_signal = Z_data(data_signal.measurements)
     
-        path = args.output_path + '/' + dt_string + 'all_sky_gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
+        path = args.output_path + '/' + args.orbits + dt_string + 'all_sky_gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
         hdf5 = h5py.File(path, 'a')
         hdf5.create_dataset('x', data=x_signal)
         hdf5.create_dataset('y', data=y_signal)
