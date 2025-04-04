@@ -100,6 +100,14 @@ if __name__ == "__main__":
     )
     
     parser.add_argument(
+        "-l",
+        "--locking",
+        default='N1-12', 
+        choices=['six','N1-12'],
+        help="Choose locking configuration",
+    )
+    
+    parser.add_argument(
         "-tdi",
         "--tdi",
         default=None, 
@@ -177,7 +185,7 @@ if __name__ == "__main__":
     print('***************************************************************************')        
     
     # noise parameters to turn selected noises back on
-    locking='six'
+    locking=args.locking
     # default parameters are commented here for reference
     # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)        
     # tm_asds=2.4E-15
@@ -190,7 +198,7 @@ if __name__ == "__main__":
         print("*************************************************")
         print("Using LISA-LCST-SGS-RP-006 baseline configuration")
         print("*************************************************")
-        locking='N1-12' # default configuration used in LISA-LCST-SGS-RP-006
+        # locking='N1-12' # default configuration used in LISA-LCST-SGS-RP-006
         # default parameters are commented here for reference
         ranging_asds=3e-9
         ranging_b = [ranging_asds * x for x in (2, -1, -1.5, 3, 0.5, 0.75)]
