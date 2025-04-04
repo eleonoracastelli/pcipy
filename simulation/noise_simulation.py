@@ -186,6 +186,9 @@ if __name__ == "__main__":
     
     # noise parameters to turn selected noises back on
     locking=args.locking
+    print("*************************************************")
+    print("Using {locking} locking configuration".format(locking=locking))
+    print("*************************************************")
     # default parameters are commented here for reference
     # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)        
     # tm_asds=2.4E-15
@@ -246,7 +249,9 @@ if __name__ == "__main__":
     
     if args.tdi:
         data_noise = Data.from_instrument(instr)
-        
+        print("*************************************************")
+        print("Using TDI {tdi}".format(tdi=args.tdi))
+        print("*************************************************")
         if args.tdi == '2':
             X, Y, Z = X2, Y2, Z2
         else:
@@ -330,7 +335,7 @@ if __name__ == "__main__":
         instr.write(args.output_path + '/' + dt_string + 'noise_sec_'+str(int(fs))+'Hz.h5')
     
     if args.individual:
-        print("Saving individual noise contribution")
+        print("***** Saving individual noise contribution")
         
         noises = ['laser', 'test-mass', 'oms']
         
@@ -368,11 +373,13 @@ if __name__ == "__main__":
                 instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
             
         if args.combined:
-            print("Saving combined noise contribution")
+            print("***** Saving combined noise contribution")
             
             noises = ['test-mass', 'oms']
             
             for n in noises:
+                print("***** Simulate laser + {n}".format(n=n))
+
                 # Instantiate LISA instrument
                 instr = Instrument(seed=simseed,
                                    size=n_data,
@@ -389,6 +396,7 @@ if __name__ == "__main__":
             if args.baseline:
                 noises = ['ranging', 'backlink', 'clock', 'modulation']
                 for n in noises:
+                    print("***** Simulate LTO + {n}".format(n=n))
                     # Instantiate LISA instrument
                     instr = Instrument(seed=simseed,
                                        size=n_data,
