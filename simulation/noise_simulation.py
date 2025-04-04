@@ -228,6 +228,7 @@ if __name__ == "__main__":
     now = datetime.now()
     # # dd/mm/YY H:M:S
     lockstr = '_locking_'+locking+'_'
+    
     dt_string = now.strftime("%Y-%m-%d_") + args.orbits  +  lockstr + 'laser_tm_oms_'
     
     # Simulate and save data

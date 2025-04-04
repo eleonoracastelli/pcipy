@@ -137,10 +137,10 @@ if __name__ == "__main__":
     # Choose files' prefixes
     now = datetime.now()
     # dd/mm/YY H:M:S
-    dt_string = now.strftime("%Y-%m-%d_")
+    dt_string = now.strftime("%Y-%m-%d_") + args.orbits + '_'
     
     # Compute and save the GW response
-    gw_file = args.output_path + '/' + args.orbits + dt_string + 'all_sky_gw_measurements_'+str(int(fs))+'Hz.h5'
+    gw_file = args.output_path + '/' + dt_string + 'all_sky_gw_measurements_'+str(int(fs))+'Hz.h5'
     
     src_class.write(gw_file,
                     dt=dt, 
@@ -164,7 +164,7 @@ if __name__ == "__main__":
         y_signal = Y_data(data_signal.measurements)
         z_signal = Z_data(data_signal.measurements)
     
-        path = args.output_path + '/' + args.orbits + dt_string + 'all_sky_gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
+        path = args.output_path + '/' + dt_string + 'all_sky_gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
         hdf5 = h5py.File(path, 'a')
         hdf5.create_dataset('x', data=x_signal)
         hdf5.create_dataset('y', data=y_signal)
