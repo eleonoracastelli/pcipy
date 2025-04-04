@@ -28,3 +28,24 @@ os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inre
 # %% keplerian
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2 --locking "six" --baseline --individual --combined')
 
+
+# %% Signal simulation
+# %% equalarm tdi 1
+os.system('python simulation/signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits equalarm --tdi 1')
+
+# %% equalarm tdi 2
+os.system('python simulation/signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits equalarm --tdi 2')
+
+# %% keplerian
+os.system('python simulation/signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2')
+
+# %% All sky simulation
+
+# %% equalarm tdi 1
+os.system('python simulation/all_sky_signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits equalarm --tdi 1')
+
+# %% equalarm tdi 2
+os.system('python simulation/all_sky_signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits equalarm --tdi 2')
+
+# %% keplerian
+os.system('python simulation/all_sky_signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2')
