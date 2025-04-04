@@ -123,6 +123,14 @@ if __name__ == "__main__":
     )
     
     parser.add_argument(
+        "-l",
+        "--locking",
+        default='N1-12', 
+        choices=['six','N1-12'],
+        help="Choose locking configuration",
+    )
+    
+    parser.add_argument(
         "-tdi",
         "--tdi",
         default=None,
@@ -209,9 +217,12 @@ if __name__ == "__main__":
 
     # noise parameters to turn selected noises back on
     locking=args.locking
+<<<<<<< HEAD
     print("*************************************************")
     print("Using {locking} locking configuration".format(locking=locking))
     print("*************************************************")
+=======
+>>>>>>> d6b3a0c (Add locking parameter)
     # default parameters are commented here for reference
     # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)     
     # tm_asds=2.4E-15
@@ -348,15 +359,9 @@ if __name__ == "__main__":
         instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms',
                                             'ranging', 'backlink', 'clock', 'modulation'])
         instr.simulate()
-<<<<<<< HEAD
 
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
 
-=======
-        
-        dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
-        
->>>>>>> 935d06d (Fix naming convention for locking)
         # Simulate and save data
         writepath = args.output_path + '/' + dt_string + 'measurements_' + str(int(fs)) + 'Hz.h5'
         try:
