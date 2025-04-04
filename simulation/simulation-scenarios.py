@@ -63,6 +63,7 @@ os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inre
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --seed {seed} --locking "six" --baseline --combined'.format(seed=simseed))
 
 
+
 # %% Signal simulation
 # %% equalarm tdi 1
 os.system('python simulation/signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits equalarm --tdi 1')
@@ -82,4 +83,8 @@ os.system('python simulation/all_sky_signal_simulation.py ../../../research/GSFC
 os.system('python simulation/all_sky_signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits equalarm --tdi 2')
 
 # %% keplerian
+<<<<<<< HEAD
 os.system('python simulation/all_sky_signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2')
+=======
+os.system('python simulation/all_sky_signal_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2')
+>>>>>>> b722af7 (Add signal simulation to scenarios script)
