@@ -10,6 +10,7 @@ import os
 import h5py
 from datetime import datetime
 
+
 # %% LOCKING N1-12 default
 # %% equalarm tdi1
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits equalarm --tdi 1 --locking "N1-12" --individual --combined')
