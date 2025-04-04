@@ -146,7 +146,6 @@ if __name__ == "__main__":
         os.remove(gw_file)
     except FileNotFoundError:
         pass
-
     src_class.write(gw_file,
                     dt=dt, 
                     size=n_data, 
@@ -170,12 +169,16 @@ if __name__ == "__main__":
         z_signal = Z_data(data_signal.measurements)
     
         path = args.output_path + '/' + dt_string + 'all_sky_gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
+<<<<<<< HEAD
         try:
             os.remove(path)
         except FileNotFoundError:
             pass
         hdf5 = h5py.File(path, 'w')
 
+=======
+        hdf5 = h5py.File(path, 'a')
+>>>>>>> 1f93f28 (fix orbits filenaming convention)
         hdf5.create_dataset('x', data=x_signal)
         hdf5.create_dataset('y', data=y_signal)
         hdf5.create_dataset('z', data=z_signal)
