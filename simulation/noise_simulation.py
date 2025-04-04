@@ -380,7 +380,7 @@ if __name__ == "__main__":
                     
             instr.disable_all_noises(excluding=n) 
             instr.simulate()
-            writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
+            writepath=args.output_path + '/' + dt_string + 'noise_individual_'+n+'_'+str(int(fs))+'Hz.h5'
             try:
                 os.remove(writepath)
             except FileNotFoundError:
@@ -404,7 +404,7 @@ if __name__ == "__main__":
                         
                 instr.disable_all_noises(excluding=n) 
                 instr.simulate()
-                writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
+                writepath=args.output_path + '/' + dt_string + 'noise_individual_'+n+'_'+str(int(fs))+'Hz.h5'
                 try:
                     os.remove(writepath)
                 except FileNotFoundError:
@@ -430,7 +430,7 @@ if __name__ == "__main__":
                         
                 instr.disable_all_noises(excluding=["laser", n]) 
                 instr.simulate()
-                writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
+                writepath=args.output_path + '/' + dt_string + 'noise_combined_laser_'+n+'_'+str(int(fs))+'Hz.h5'
                 try:
                     os.remove(writepath)
                 except FileNotFoundError:
@@ -455,7 +455,7 @@ if __name__ == "__main__":
                             
                     instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n]) 
                     instr.simulate()
-                    writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
+                    writepath=args.output_path + '/' + dt_string + 'noise_combined_lto_'+n+'_'+str(int(fs))+'Hz.h5'
                     try:
                         os.remove(writepath)
                     except FileNotFoundError:
