@@ -242,8 +242,14 @@ if __name__ == "__main__":
     
     dt_string = now.strftime("%Y-%m-%d_") + args.orbits  +  lockstr + 'laser_tm_oms_'
     
+    writepath = args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5'
     # Simulate and save data
-    instr.write(args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5')
+    # check if file exists and delete it otherwise
+    try:
+        os.remove(writepath)
+    except FileNotFoundError:
+        pass
+    instr.write(writepath)
     
     # Get the single-link outputs and delays
     
@@ -266,7 +272,11 @@ if __name__ == "__main__":
         z_noise = Z_data(data_noise.measurements)
     
         path = args.output_path + '/' + dt_string + 'noise_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
-        hdf5 = h5py.File(path, 'a')
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        hdf5 = h5py.File(path, 'w')
         hdf5.create_dataset('x', data=x_noise)
         hdf5.create_dataset('y', data=y_noise)
         hdf5.create_dataset('z', data=z_noise)
@@ -278,7 +288,12 @@ if __name__ == "__main__":
     instr.disable_all_noises(excluding=['test-mass', 'oms'])
     instr.simulate()
     # Store secondary noises
-    instr.write(args.output_path + '/' + dt_string + 'noise_sec_'+str(int(fs))+'Hz.h5')
+    writepath = args.output_path + '/' + dt_string + 'noise_sec_'+str(int(fs))+'Hz.h5'
+    try:
+        os.remove(writepath)
+    except FileNotFoundError:
+        pass
+    instr.write(writepath)
     
     if args.baseline:
         # Instantiate LISA instrument
@@ -300,7 +315,12 @@ if __name__ == "__main__":
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
         
         # Simulate and save data
-        instr.write(args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5')
+        writepath = args.output_path + '/' + dt_string + 'measurements_' + str(int(fs)) + 'Hz.h5'
+        try:
+            os.remove(writepath)
+        except FileNotFoundError:
+            pass
+        instr.write(writepath)
         
         # Get the single-link outputs and delays
         if args.tdi:
@@ -320,7 +340,11 @@ if __name__ == "__main__":
             z_noise = Z_data(data_noise.measurements)
         
             path = args.output_path + '/' + dt_string + 'noise_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
-            hdf5 = h5py.File(path, 'a')
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+            hdf5 = h5py.File(path, 'w')
             hdf5.create_dataset('x', data=x_noise)
             hdf5.create_dataset('y', data=y_noise)
             hdf5.create_dataset('z', data=z_noise)
@@ -332,7 +356,12 @@ if __name__ == "__main__":
         instr.disable_all_noises(excluding=['test-mass', 'oms', 'ranging', 'backlink', 'clock', 'modulation'])
         instr.simulate()
         # Store secondary noises
-        instr.write(args.output_path + '/' + dt_string + 'noise_sec_'+str(int(fs))+'Hz.h5')
+        writepath=args.output_path + '/' + dt_string + 'noise_sec_'+str(int(fs))+'Hz.h5'
+        try:
+            os.remove(writepath)
+        except FileNotFoundError:
+            pass
+        instr.write(writepath)
     
     if args.individual:
         print("***** Saving individual noise contribution")
@@ -351,7 +380,12 @@ if __name__ == "__main__":
                     
             instr.disable_all_noises(excluding=n) 
             instr.simulate()
-            instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
+            writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
+            try:
+                os.remove(writepath)
+            except FileNotFoundError:
+                pass
+            instr.write(writepath)
        
         if args.baseline:
             noises = ['ranging', 'backlink', 'clock', 'modulation']
@@ -370,7 +404,12 @@ if __name__ == "__main__":
                         
                 instr.disable_all_noises(excluding=n) 
                 instr.simulate()
-                instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
+                writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
+                try:
+                    os.remove(writepath)
+                except FileNotFoundError:
+                    pass
+                instr.write(writepath)
             
         if args.combined:
             print("***** Saving combined noise contribution")
@@ -391,7 +430,12 @@ if __name__ == "__main__":
                         
                 instr.disable_all_noises(excluding=["laser", n]) 
                 instr.simulate()
-                instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
+                writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
+                try:
+                    os.remove(writepath)
+                except FileNotFoundError:
+                    pass
+                instr.write(writepath)
            
             if args.baseline:
                 noises = ['ranging', 'backlink', 'clock', 'modulation']
@@ -411,7 +455,12 @@ if __name__ == "__main__":
                             
                     instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n]) 
                     instr.simulate()
-                    instr.write(args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5')
+                    writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
+                    try:
+                        os.remove(writepath)
+                    except FileNotFoundError:
+                        pass
+                    instr.write(writepath)
                 
             
 
