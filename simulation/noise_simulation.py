@@ -115,6 +115,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-s", 
+        "--seed", 
+        type=int,
+        default = None,
+        help = "Specify simulation seed")
+    
+    parser.add_argument(
         "-orb",
         "--orbits",
         default='keplerian', 
@@ -250,15 +257,14 @@ if __name__ == "__main__":
         # clock_freqquaddrifts="default"
         # modulation_asds_left=5.2E-14
         # modulation_asds_right=5.2E-13
-        moc_time_correlation_asds = 0.042
-
+        moc_time_correlation_asds = 0.042 
     # Instantiate LISA instrument
     instr = Instrument(size=n_data,
                         dt=dt,
-                        t0=instrument_t0,
+                        t0=instrument_t0, 
                         seed = args.seed,
-                        lock=locking,
-                        orbits=orbits,
+                        lock=locking, 
+                        orbits=orbits, 
                         aafilter=('kaiser', 240, args.freq1, args.freq2),
                         clock_offsets={'1':clock_offsets[0],
                                        '2':clock_offsets[1],
@@ -268,6 +274,7 @@ if __name__ == "__main__":
 
     # Disable all noises
     instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
+
     instr.simulate()
 
     simseed = instr.seed
@@ -368,11 +375,7 @@ if __name__ == "__main__":
         except FileNotFoundError:
             pass
         instr.write(writepath)
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> 38b9cf9 (Check if hdf5 file exists before writing)
         # Get the single-link outputs and delays
         if args.tdi:
             data_noise = Data.from_instrument(instr)
@@ -415,25 +418,71 @@ if __name__ == "__main__":
         except FileNotFoundError:
             pass
         instr.write(writepath)
-<<<<<<< HEAD
     if args.baseline:
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
 
+    
     if args.combined:
         print("***** Saving combined noise contribution")
-
+        
         noises = ['test-mass', 'oms']
+        
+        for n in noises:
+            print("***** Simulate laser + {n}".format(n=n))
 
-=======
-    
+            # Instantiate LISA instrument
+            instr = Instrument(seed=simseed,
+                               size=n_data,
+                                dt=dt,
+                                t0=instrument_t0, 
+                                lock=locking, 
+                                orbits=orbits, 
+                                aafilter=('kaiser', 240, args.freq1, args.freq2))
+                    
+            instr.disable_all_noises(excluding=["laser", n]) 
+            instr.simulate()
+            writepath=args.output_path + '/' + dt_string + 'noise_combined_laser_'+n+'_'+str(int(fs))+'Hz.h5'
+            try:
+                os.remove(writepath)
+            except FileNotFoundError:
+                pass
+            print("***** write laser + {n}".format(n=n))
+            instr.write(writepath)
+       
+        if args.baseline:
+            noises = ['ranging', 'backlink', 'clock', 'modulation']
+            for n in noises:
+                print("***** Simulate LTO + {n}".format(n=n))
+                # Instantiate LISA instrument
+                instr = Instrument(seed=simseed,
+                                   size=n_data,
+                                    dt=dt,
+                                    t0=instrument_t0, 
+                                    lock=locking, 
+                                    orbits=orbits, 
+                                    aafilter=('kaiser', 240, args.freq1, args.freq2),
+                                    clock_offsets={'1':clock_offsets[0],'2':clock_offsets[1],'3':clock_offsets[2]},
+                                    ranging_biases= ranging_biases,
+                                    moc_time_correlation_asds = moc_time_correlation_asds)
+                        
+                instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n]) 
+                instr.simulate()
+                writepath=args.output_path + '/' + dt_string + 'noise_combined_lto_'+n+'_'+str(int(fs))+'Hz.h5'
+                try:
+                    os.remove(writepath)
+                except FileNotFoundError:
+                    pass
+                print("***** write lto + {n}".format(n=n))
+                instr.write(writepath)
+
     if args.individual:
         print("***** Saving individual noise contribution")
         
         noises = ['laser', 'test-mass', 'oms']
         
->>>>>>> 38b9cf9 (Check if hdf5 file exists before writing)
         for n in noises:
-            print("***** Simulate laser + {n}".format(n=n))
+
+            print("***** Simulate {n}".format(n=n))
 
             # Instantiate LISA instrument
             instr = Instrument(seed=simseed,
@@ -446,31 +495,21 @@ if __name__ == "__main__":
 
             instr.disable_all_noises(excluding=["laser", n])
             instr.simulate()
-<<<<<<< HEAD
-<<<<<<< HEAD
-            writepath=args.output_path + '/' + dt_string+'noise_combined_laser_'+n+'_'+str(int(fs))+'Hz.h5'
-=======
-            writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
->>>>>>> 38b9cf9 (Check if hdf5 file exists before writing)
-=======
+
             writepath=args.output_path + '/' + dt_string + 'noise_individual_'+n+'_'+str(int(fs))+'Hz.h5'
->>>>>>> 8a0583e (Save individual and combined noise simulations)
             try:
                 os.remove(writepath)
             except FileNotFoundError:
                 pass
-<<<<<<< HEAD
-            print("***** write laser + {n}".format(n=n))
-            instr.write(writepath)
 
-=======
+            print("***** write {n}".format(n=n))
             instr.write(writepath)
        
->>>>>>> 38b9cf9 (Check if hdf5 file exists before writing)
         if args.baseline:
             noises = ['ranging', 'backlink', 'clock', 'modulation']
             for n in noises:
-                print("***** Simulate LTO + {n}".format(n=n))
+                print("***** Simulate {n}".format(n=n))
+
                 # Instantiate LISA instrument
                 instr = Instrument(seed=simseed,
                                    size=n_data,
@@ -487,119 +526,12 @@ if __name__ == "__main__":
 
                 instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n])
                 instr.simulate()
-<<<<<<< HEAD
-<<<<<<< HEAD
-                writepath=args.output_path + '/' + dt_string+'noise_combined_lto_'+n+'_'+str(int(fs))+'Hz.h5'
-=======
-                writepath=args.output_path + '/' + dt_string + 'noise_'+n+'_'+str(int(fs))+'Hz.h5'
->>>>>>> 38b9cf9 (Check if hdf5 file exists before writing)
-=======
+
                 writepath=args.output_path + '/' + dt_string + 'noise_individual_'+n+'_'+str(int(fs))+'Hz.h5'
->>>>>>> 8a0583e (Save individual and combined noise simulations)
                 try:
                     os.remove(writepath)
                 except FileNotFoundError:
                     pass
-<<<<<<< HEAD
-                print("***** write lto + {n}".format(n=n))
-                instr.write(writepath)
-
-    if args.individual:
-        print("***** Saving individual noise contribution")
-
-        noises = ['laser', 'test-mass', 'oms']
-
-        for n in noises:
-            print("***** Simulate {n}".format(n=n))
-
-            # Instantiate LISA instrument
-            instr = Instrument(seed=simseed,
-                               size=n_data,
-                                dt=dt,
-                                t0=instrument_t0,
-                                lock=locking,
-                                orbits=orbits,
-                                aafilter=('kaiser', 240, args.freq1, args.freq2))
-
-            instr.disable_all_noises(excluding=n)
-            instr.simulate()
-            writepath=args.output_path + '/' + dt_string+'noise_individual_'+n+'_'+str(int(fs))+'Hz.h5'
-            try:
-                os.remove(writepath)
-            except FileNotFoundError:
-                pass
-            print("***** write {n}".format(n=n))
-            instr.write(writepath)
-        if args.baseline:
-            noises = ['ranging', 'backlink', 'clock', 'modulation']
-=======
-                instr.write(writepath)
-            
-        if args.combined:
-            print("***** Saving combined noise contribution")
-            
-            noises = ['test-mass', 'oms']
-            
->>>>>>> 38b9cf9 (Check if hdf5 file exists before writing)
-            for n in noises:
-                print("***** Simulate {n}".format(n=n))
-
-                # Instantiate LISA instrument
-                instr = Instrument(seed=simseed,
-                                   size=n_data,
-                                    dt=dt,
-<<<<<<< HEAD
-                                    t0=instrument_t0,
-                                    lock=locking,
-                                    orbits=orbits,
-                                    aafilter=('kaiser', 240, args.freq1, args.freq2),
-                                    clock_offsets={'1':clock_offsets[0],
-                                                   '2':clock_offsets[1],
-                                                   '3':clock_offsets[2]},
-                                    ranging_biases= ranging_biases,
-                                    moc_time_correlation_asds = moc_time_correlation_asds)
-=======
-                                    t0=instrument_t0, 
-                                    lock=locking, 
-                                    orbits=orbits, 
-                                    aafilter=('kaiser', 240, args.freq1, args.freq2))
-                        
-                instr.disable_all_noises(excluding=["laser", n]) 
-                instr.simulate()
-                writepath=args.output_path + '/' + dt_string + 'noise_combined_laser_'+n+'_'+str(int(fs))+'Hz.h5'
-                try:
-                    os.remove(writepath)
-                except FileNotFoundError:
-                    pass
-                instr.write(writepath)
-           
-            if args.baseline:
-                noises = ['ranging', 'backlink', 'clock', 'modulation']
-                for n in noises:
-                    print("***** Simulate LTO + {n}".format(n=n))
-                    # Instantiate LISA instrument
-                    instr = Instrument(seed=simseed,
-                                       size=n_data,
-                                        dt=dt,
-                                        t0=instrument_t0, 
-                                        lock=locking, 
-                                        orbits=orbits, 
-                                        aafilter=('kaiser', 240, args.freq1, args.freq2),
-                                        clock_offsets={'1':clock_offsets[0],'2':clock_offsets[1],'3':clock_offsets[2]},
-                                        ranging_biases= ranging_biases,
-                                        moc_time_correlation_asds = moc_time_correlation_asds)
-                            
-                    instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n]) 
-                    instr.simulate()
-                    writepath=args.output_path + '/' + dt_string + 'noise_combined_lto_'+n+'_'+str(int(fs))+'Hz.h5'
-                    try:
-                        os.remove(writepath)
-                    except FileNotFoundError:
-                        pass
-                    instr.write(writepath)
-                
-            
->>>>>>> 38b9cf9 (Check if hdf5 file exists before writing)
 
                 instr.disable_all_noises(excluding=n)
                 instr.simulate()
