@@ -306,7 +306,7 @@ if __name__ == "__main__":
         pass
     instr.write(writepath)
     
-    if args.baseline:
+    if args.baseline and (not args.individual and not args.combined):
         print("***** baseline")
 
         # Instantiate LISA instrument
