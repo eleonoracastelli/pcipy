@@ -46,6 +46,7 @@ setup(
                           'h5py', 
                           'scikit-learn', 
                           'lisainstrument>=1.8',
+                          'lisaorbits',
                           'lisagwresponse',
                           'pytdi'],
         # needs to be installed along with your package. Eg: 'caer'
