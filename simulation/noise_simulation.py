@@ -242,8 +242,12 @@ if __name__ == "__main__":
     # Disable all noises
     instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
     # instr.simulate()
-    if not args.seed:
-        simseed = instr.seed
+    
+    simseed = instr.seed
+    
+    print("*************************************************")
+    print("Using seed {seed}".format(seed=simseed))
+    print("*************************************************")
 
     # Choose files' prefixes
     # datetime object containing current date and time
