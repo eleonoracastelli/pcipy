@@ -10,7 +10,6 @@ import os
 import h5py
 from datetime import datetime
 
-
 # %% LOCKING N1-12 default
 # %% equalarm tdi1
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits equalarm --tdi 1 --locking "N1-12" --individual --combined')
@@ -40,11 +39,19 @@ os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inre
 # %% keplerian
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2 --seed {seed} --locking "N1-12" --baseline'.format(seed=simseed))
 
+<<<<<<< HEAD
 # %% keplerian individual
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --seed {seed} --locking "N1-12" --baseline --individual'.format(seed=simseed))
 
 # %% keplerian combined
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --seed {seed} --locking "N1-12" --baseline --combined'.format(seed=simseed))
+
+# %% keplerian
+os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2 --seed {seed} --locking "N1-12" --baseline --individual'.format(seed=simseed))
+
+# %% keplerian
+os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2 --seed {seed} --locking "N1-12" --baseline --combined'.format(seed=simseed))
+
 
 # %% LOCKING 'six'
 # %% equalarm tdi1
@@ -57,11 +64,18 @@ os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inre
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2 --seed {seed} --locking "six" --baseline'.format(seed=simseed))
 
 # %% keplerian individual
+<<<<<<< HEAD
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --seed {seed} --locking "six" --baseline --individual'.format(seed=simseed))
 
 # %% keplerian combined
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --seed {seed} --locking "six" --baseline --combined'.format(seed=simseed))
 
+=======
+os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2 --seed {seed} --locking "six" --baseline --individual'.format(seed=simseed))
+
+# %% keplerian combined
+os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits keplerian --tdi 2 --seed {seed} --locking "six" --baseline --combined'.format(seed=simseed))
+>>>>>>> 3afc676 (Add various simulation scenarios)
 
 
 # %% Signal simulation
