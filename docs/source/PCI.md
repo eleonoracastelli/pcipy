@@ -1,5 +1,5 @@
 # Principal Component Interferometry (PCI) principles
-(from John's AAS poster)
+(Draft - most content is from John's AAS poster)
 
 Principal Component Interferometry (PCI) is an analysis technique whose theory we outline in two papers:
 - [first](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.103.042006) 
