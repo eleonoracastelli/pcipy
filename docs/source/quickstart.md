@@ -44,16 +44,19 @@ The input channels $\vec{y}$ are stretches of data, usually of length `ns+2*nhal
 In every case the window is trivial np.ones([data lenght])  
 
 The PCIFilter class applies the following methods
-{method}`self.build_data_matrix(ydata, zero_mean=zero_mean,detrend=detrend)`
+- `self.build_data_matrix(ydata, zero_mean=zero_mean,detrend=detrend)`
 
-{method}`self.apply_pca(datamatrix, maxcompts)`
+- `self.apply_pca(datamatrix, maxcompts)`
 
-{method}`self.set_stencil(self.maxcompts)`
+- `self.set_stencil(self.maxcompts)`
 
-{method}`self.channels = self.components.dot(datamatrix.T).astype(np.float64)`
+- `self.channels = self.components.dot(datamatrix.T).astype(np.float64)`
 
 ## 3. Run channel analysis on the PCI output
+...
 
 ## 4. Reconstruct single-link channels
+...
 
 ## 5. Estimate sensitivity
+...
