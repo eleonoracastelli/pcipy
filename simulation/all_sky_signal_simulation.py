@@ -24,20 +24,13 @@ import logging
 import numpy as np
 import healpy as hp
 import h5py
-# import copy
+import os
 from datetime import datetime
-# from scipy import constants
-# import lisagwresponse
-# from lisaorbits import KeplerianOrbits
+from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 from lisagwresponse import StochasticBackground
 from lisagwresponse.psd import white_generator
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
-# from pytdi.intervar import ETA_SET
 from pytdi import Data
-# from pytdi import dsp
-# FTT modules
-# from pyfftw.interfaces.numpy_fft import ifft
-#
 
 if __name__ == "__main__":
 
@@ -66,6 +59,14 @@ if __name__ == "__main__":
     )
     
     parser.add_argument(
+        "-orb",
+        "--orbits",
+        default='keplerian', 
+        choices=['keplerian','equalarm'],
+        help="Choose orbit type",
+    )
+    
+    parser.add_argument(
         "-tdi",
         "--tdi",
         default=None, 
@@ -79,20 +80,47 @@ if __name__ == "__main__":
     dt = args.dt
     # Sampling frequency
     fs = 1 / dt
+    # t0
+    t0 = 2173211130.0 # s  datetime.datetime(2038, 11, 12, 16, 45, 30)
+
     # Data size: 24 hours or 2 days
     tobs = 3 * 24 * 3600
     n_data = int(tobs * fs)
     logging.info("Data size: " + str(n_data))
     logging.info("Data duration: " + str(tobs/3600) + " hours")
+    # Central frequency
+    central_freq = 281600000000000.0
 
-    # Choose orbit file
-    # orbits = "/data/jgbaker/software/pylisa/data/keplerian-orbits.h5"
-    datadir = "/Users/ecastel2/Documents/research/GSFC/simulation-tests/orbits/"
-    orbits = datadir+"keplerian-orbits.h5" # datadir + 'new-orbits.h5' #
+    # set up proper time grid for simulation
     
-    with h5py.File(orbits) as f:
-        orbit_t0 = f.attrs['t0']
+    pytdi_trim = 1000
+    pytdi_t0 = t0 - pytdi_trim * dt
+    pytdi_size = n_data + pytdi_trim
 
+    instrument_t0 = pytdi_t0
+    instrument_size = pytdi_size
+
+    orbits_dt = 100_000
+    orbits_trim = 100
+    orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
+    orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
+
+    if args.orbits == 'keplerian':
+        OrbitsGenerator = KeplerianOrbits
+    elif args.orbits == 'equalarm':
+        OrbitsGenerator = EqualArmlengthOrbits
+        
+    # Generate new keplerian orbits
+    orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
+    print('***************************************************************************')
+    if not os.path.isfile(orbits):
+        print('**** Orbits file not in output path folder. Generating {orb} orbit file.'.format(orb=args.orbits))
+        orbitsobj = OrbitsGenerator()
+        orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
+    else:
+        print('**** Selecting existing {orb} orbit file.'.format(orb=args.orbits))
+    print('***************************************************************************') 
+    
     # Instantiate GW signal class
     npix = hp.nside2npix(8)
     skymap = np.ones(npix) / np.sqrt(npix)
@@ -103,21 +131,25 @@ if __name__ == "__main__":
                                       orbits=orbits, 
                                       dt=dt, 
                                       size=n_data, 
-                                      t0=1000 + orbit_t0, 
+                                      t0=instrument_t0, 
                                       optim=True)
 
     # Choose files' prefixes
     now = datetime.now()
     # dd/mm/YY H:M:S
-    dt_string = now.strftime("%Y-%m-%d_%Hh%M_")
-    
+    dt_string = now.strftime("%Y-%m-%d_") + args.orbits + '_'
+   
     # Compute and save the GW response
+
     gw_file = args.output_path + '/' + dt_string + 'all_sky_gw_measurements_'+str(int(fs))+'Hz.h5'
-    
+    try:
+        os.remove(gw_file)
+    except FileNotFoundError:
+        pass
     src_class.write(gw_file,
                     dt=dt, 
                     size=n_data, 
-                    t0 = 1000 + orbit_t0)
+                    t0 = instrument_t0)
        
     #  Get data from GW simulation    
     if args.tdi:
@@ -137,7 +169,13 @@ if __name__ == "__main__":
         z_signal = Z_data(data_signal.measurements)
     
         path = args.output_path + '/' + dt_string + 'all_sky_gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
-        hdf5 = h5py.File(path, 'a')
+
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        hdf5 = h5py.File(path, 'w')
+
         hdf5.create_dataset('x', data=x_signal)
         hdf5.create_dataset('y', data=y_signal)
         hdf5.create_dataset('z', data=z_signal)
