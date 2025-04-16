@@ -104,7 +104,7 @@ if __name__ == "__main__":
     orbits_trim = 100
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
-    
+
     if args.orbits == 'keplerian':
         OrbitsGenerator = KeplerianOrbits
     elif args.orbits == 'equalarm':
@@ -138,8 +138,9 @@ if __name__ == "__main__":
     now = datetime.now()
     # dd/mm/YY H:M:S
     dt_string = now.strftime("%Y-%m-%d_") + args.orbits + '_'
-    
+   
     # Compute and save the GW response
+
     gw_file = args.output_path + '/' + dt_string + 'all_sky_gw_measurements_'+str(int(fs))+'Hz.h5'
     try:
         os.remove(gw_file)
@@ -168,11 +169,13 @@ if __name__ == "__main__":
         z_signal = Z_data(data_signal.measurements)
     
         path = args.output_path + '/' + dt_string + 'all_sky_gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
+
         try:
             os.remove(path)
         except FileNotFoundError:
             pass
         hdf5 = h5py.File(path, 'w')
+
         hdf5.create_dataset('x', data=x_signal)
         hdf5.create_dataset('y', data=y_signal)
         hdf5.create_dataset('z', data=z_signal)
