@@ -121,7 +121,6 @@ if __name__ == "__main__":
         print('**** Selecting existing {orb} orbit file.'.format(orb=args.orbits))
     print('***************************************************************************') 
     
-    
     # Instantiate GW signal class
     src_class = StochasticPointSource(white_generator(1),  #white_noise_generator_at_1,  
                                       orbits=orbits,
@@ -137,7 +136,9 @@ if __name__ == "__main__":
     dt_string = now.strftime("%Y-%m-%d_") + args.orbits + '_'
     
     # Compute and save the GW response
+
     gw_file = args.output_path + '/' + dt_string + 'gw_measurements_'+str(int(fs))+'Hz.h5'
+
     try:
         os.remove(gw_file)
     except FileNotFoundError:
@@ -165,11 +166,13 @@ if __name__ == "__main__":
         z_signal = Z_data(data_signal.measurements)
     
         path = args.output_path + '/' + dt_string + 'gw_tdi'+args.tdi+'_'+str(int(fs))+'Hz.h5'
+
         try:
             os.remove(path)
         except FileNotFoundError:
             pass
         hdf5 = h5py.File(path, 'w')
+
         hdf5.create_dataset('x', data=x_signal)
         hdf5.create_dataset('y', data=y_signal)
         hdf5.create_dataset('z', data=z_signal)
