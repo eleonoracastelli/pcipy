@@ -161,8 +161,8 @@ class LinearFilter:
                     data[ioc]+=convolve(self.stencil_compts[ioc,:,i][::-1],input_data.data[i,:],mode='valid')
 
         else: raise ValueError('Invalid value for "method"')
-        t0=self.t0
-        if t0 is not None and self.dt is not None: t0+=self.nleft*self.dt
+        t0=None
+        if input_data.t0 is not None and self.dt is not None: t0=input_data.t0+self.nleft*self.dt
         return TimeData(data, dt=self.dt, t0=t0, names=self.output_names)
 
 
