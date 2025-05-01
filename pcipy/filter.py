@@ -122,7 +122,7 @@ class LinearFilter:
         
         return True
 
-    def apply_filter(self, input_data, check=True,method='dot'):
+    def apply_filter(self, input_data, check=True,method='convolve'):
         '''
         Apply the encoded filter to the input_data.
 

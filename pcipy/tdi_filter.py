@@ -135,8 +135,8 @@ class DeducedTDIFilter(LinearFilter):
             name=f'isi_{link}'
             #print(name,data.shape,'\n',data)
             measurements_1[name][nleft]=1
-            XYZ_z=np.array([op(measurements_1) for op in XYZ_ops])
-            XYZ_1[link]=np.array([op(measurements_z) for op in XYZ_ops])-XYZ_z
+            XYZ_z=np.array([op(measurements_z) for op in XYZ_ops])
+            XYZ_1[link]=np.array([op(measurements_1) for op in XYZ_ops])-XYZ_z
             for i in range(3):
                 nz=np.nonzero(XYZ_1[link][i])[0]
                 minmax = [min(nz),max(nz)] if len(nz)>0 else ''
