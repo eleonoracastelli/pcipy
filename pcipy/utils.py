@@ -1,16 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Dec 11 14:18:38 2024
+utils.py
 
-@author: E Castelli
+This module provides utility functions for estimating the Power Spectral Density (PSD) of signals.
+The functions included in this module facilitate various methods of PSD estimation, including
+the periodogram, Welch's method, and multitaper methods. These utilities are designed to assist
+researchers and engineers in analyzing the frequency content of signals in various applications.
+
+Classes:
+    - PSDStats: class written by Lorenzo Sala in 2021. Used in LPF data analysis and publications: PhysRevLett.120.061101, ...
+        Slightly adapted by E Castelli in 2022.    
+        Computes the one-sided Cross Power Spectral Density (CPSD) matrix
+        at minimally correlated frequencies, averaging over periodograms. Compute cross-coherences.
+    
+    
+Functions:
+- estimate_psd: Estimate PSD of a given data stretch, by interpolating the log-periodogram of the data DFT.
+- choose_freqs: selection of minimally correlated frequencies according to PhysRevLett.120.061101
+
+
+@author: E Castelli, 2025
 """
 
 import numpy as np
 import scipy.special as sp
 from scipy import interpolate
 
-def estimatePSD(data, dt, Nmax, fmax, axs = None):
+def estimate_psd(data, dt, Nmax, fmax, axs = None):
     '''
     Estimate PSD of a given data stretch, by interpolating the log-periodogram of the data DFT.
     Uses minimally correlated frequencies according to the CPSD estimation algorithm originally published in PhysRevLett.120.061101
@@ -46,7 +63,7 @@ def estimatePSD(data, dt, Nmax, fmax, axs = None):
     # # logf_knots = np.linspace(np.log(fmin), np.log(fmax), n_coeffs) # check knots location
 
     # Switching to minimally correlated frequencies selection algorithm from LPF
-    logf_knots = np.log(choosefreqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
+    logf_knots = np.log(choose_freqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
     n_coeffs = len(logf_knots)
     # redefine fmin, fmax, ip
     fmin = np.exp(logf_knots[0])
@@ -84,7 +101,7 @@ def estimatePSD(data, dt, Nmax, fmax, axs = None):
     noisecoeffs = [np.dot(projector, log_per[:, j]) for j in range(3)]
     # plot noise stretches and interpolated coefficients
     if axs is not None:
-        logf_knots = np.log(choosefreqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
+        logf_knots = np.log(choose_freqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
         axs.T[len(noisecoeffs)-1][0].set_title("Noise stretch {n}".format(n = len(noisecoeffs)))
         for tdi, ax in enumerate(axs.T[len(noisecoeffs)-1]):
             ax.loglog(f[ip], np.abs(n_dft[tdi][ip])**2, zorder=0, alpha = 0.7)
@@ -134,16 +151,16 @@ class PSDstats():
         if(datamat.ndim==1):
             datamat = np.reshape(datamat,(1,datamat.size))
         if detrend: datamat = datamat - np.mean(datamat,axis=1,keepdims=True)
-        win = BH92 if win is None else win
+        win = bh_92 if win is None else win
         initcheck(datamat,Tmax,fmax,fs)
         self.fs = fs
         self.olap = olap
         self.units = units
-        self.L, self.freqs = choosefreqs(Nmax=Tmax*fs,fmax=fmax,fs=fs)
+        self.L, self.freqs = choose_freqs(Nmax=Tmax*fs,fmax=fmax,fs=fs)
         if getperiodograms:
-            self.periodograms, self.navs = getPeriodograms(datamat=datamat,L=self.L,freqs=self.freqs,fs=fs,win=win,olap=olap)
-        self.CPSD, self.navs = getCPSD(datamat=datamat,L=self.L,freqs=self.freqs,fs=fs,win=win,olap=olap)
-        self.cohere = getcohere(CPSD=self.CPSD)
+            self.periodograms, self.navs = get_periodograms(datamat=datamat,L=self.L,freqs=self.freqs,fs=fs,win=win,olap=olap)
+        self.CPSD, self.navs = get_cpsd(datamat=datamat,L=self.L,freqs=self.freqs,fs=fs,win=win,olap=olap)
+        self.cohere = get_cohere(CPSD=self.CPSD)
 
     def getPSDerrors(self,idx=0,cval=0.68):
         '''
@@ -170,7 +187,7 @@ class PSDstats():
         Smax = self.navs*Sxx/sp.gammainccinv(self.navs,(1+cval)/2)
         return Sxx,Smin,Smax
 
-def BH_lowpass(data, t_win=100,t_sam=5,fs=10):
+def bh_lowpass(data, t_win=100,t_sam=5,fs=10):
     '''
     Lowpass data by convolving with a BH92 windowing function.
     L Sala, December 2021
@@ -205,7 +222,7 @@ def BH_lowpass(data, t_win=100,t_sam=5,fs=10):
     assert np.isclose(dtarr[0],dt,rtol=1e-5), 'Aaargh, sampling frequency is not consistent with data.' #just check fs
     assert np.allclose(dtarr,dt,rtol=1e-5), 'Aaargh, your data are not equally sampled in time.' #just check sampling time
 
-    BHfilt = BH92(step_win) #build filter
+    BHfilt = bh_92(step_win) #build filter
     BHarea = np.sum(BHfilt)
     BHfilt = BHfilt/BHarea
     onearray = np.ones(step_win)/step_win
@@ -220,7 +237,7 @@ def BH_lowpass(data, t_win=100,t_sam=5,fs=10):
     datalp = np.rec.fromarrays(outts, names = ['t', 'A', 'E', 'T'])
     return datalp
 
-def BH92(M:int):
+def bh_92(M:int):
     '''
     Mathematical expression of a Blackman-Harris window.
     
@@ -334,7 +351,7 @@ def initcheck(datamat,Tmax,fmax,fs):
     return
 
 
-def choosefreqs(Nmax:int,fmax:float,fs:float):
+def choose_freqs(Nmax:int,fmax:float,fs:float):
     '''
     Minimally correlated frequencies selection, according to the CPSD estimation algorithm originally published in PhysRevLett.120.061101 and Supplemental Material.
     
@@ -373,7 +390,7 @@ def choosefreqs(Nmax:int,fmax:float,fs:float):
         k += 1
     return np.asarray(L,dtype=int),np.asarray(f)
 
-def getCPSD(datamat,L,freqs,fs,win,olap):
+def get_cpsd(datamat,L,freqs,fs,win,olap):
     '''
     L Sala, Oct21/Sept22
 
@@ -396,12 +413,12 @@ def getCPSD(datamat,L,freqs,fs,win,olap):
     CPSD = []
     navs = []
     for (tmpL,tmpf) in zip(L,freqs):
-        tmpCPSD,tmpnavs,_ = getCPSD_1freq(datamat=datamat,tmpL=tmpL,tmpf=tmpf,fs=fs,win=win,olap=olap)
+        tmpCPSD,tmpnavs,_ = get_cpsd_1freq(datamat=datamat,tmpL=tmpL,tmpf=tmpf,fs=fs,win=win,olap=olap)
         CPSD.append(tmpCPSD)
         navs.append(tmpnavs)
     return np.asarray(CPSD),np.asarray(navs)
 
-def getPeriodograms(datamat,L,freqs,fs,win,olap):
+def get_periodograms(datamat,L,freqs,fs,win,olap):
     '''
     L Sala, Oct21/Sept22
 
@@ -424,12 +441,12 @@ def getPeriodograms(datamat,L,freqs,fs,win,olap):
     periodograms = []
     navs = []
     for (tmpL,tmpf) in zip(L,freqs):
-        _,tmpnavs,tmpPeriodograms = getCPSD_1freq(datamat=datamat,tmpL=tmpL,tmpf=tmpf,fs=fs,win=win,olap=olap)
+        _,tmpnavs,tmpPeriodograms = get_cpsd_1freq(datamat=datamat,tmpL=tmpL,tmpf=tmpf,fs=fs,win=win,olap=olap)
         periodograms.append(tmpPeriodograms)
         navs.append(tmpnavs)
     return periodograms,np.asarray(navs)
 
-def getCPSD_1freq(datamat,tmpL,tmpf,fs,win,olap):
+def get_cpsd_1freq(datamat,tmpL,tmpf,fs,win,olap):
     '''
     L Sala, Oct21/Sept22
 
@@ -478,7 +495,7 @@ def getCPSD_1freq(datamat,tmpL,tmpf,fs,win,olap):
     periodograms  = np.asarray(periodograms)*np.sqrt(2.0/fs/wins2); #one-sided periodograms
     return tmpCPSD,tmpnavs,periodograms
 
-def getcohere(CPSD):
+def get_cohere(CPSD):
     '''
     L Sala, Oct21/Sept22
 
