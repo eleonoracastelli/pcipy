@@ -23,9 +23,9 @@ from pytdi import Data
 
 # %% 
 
-# To print the logs
-logging.basicConfig()
-logging.getLogger().setLevel(logging.INFO)
+# # To print the logs
+# logging.basicConfig()
+# logging.getLogger().setLevel(logging.INFO)
 
 # create figure objects
 figs = []
