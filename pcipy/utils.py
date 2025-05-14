@@ -27,98 +27,98 @@ import numpy as np
 import scipy.special as sp
 from scipy import interpolate
 
-def estimate_psd(data, dt, Nmax, fmax, axs = None):
-    '''
-    Estimate PSD of a given data stretch, by interpolating the log-periodogram of the data DFT.
-    Uses minimally correlated frequencies according to the CPSD estimation algorithm originally published in PhysRevLett.120.061101
+# def estimate_psd(data, dt, Nmax, fmax, axs = None):
+#     '''
+#     Estimate PSD of a given data stretch, by interpolating the log-periodogram of the data DFT.
+#     Uses minimally correlated frequencies according to the CPSD estimation algorithm originally published in PhysRevLett.120.061101
     
-    L Sala, Oct21/Sept22
+#     L Sala, Oct21/Sept22
 
-    Parameters
-    ----------
-    data : TYPE
-        DESCRIPTION.
-    dt : TYPE
-        DESCRIPTION.
-    Nmax : TYPE
-        DESCRIPTION.
-    fmax : TYPE
-        DESCRIPTION.
-    axs : TYPE, optional
-        DESCRIPTION. The default is None.
+#     Parameters
+#     ----------
+#     data : TYPE
+#         DESCRIPTION.
+#     dt : TYPE
+#         DESCRIPTION.
+#     Nmax : TYPE
+#         DESCRIPTION.
+#     fmax : TYPE
+#         DESCRIPTION.
+#     axs : TYPE, optional
+#         DESCRIPTION. The default is None.
 
-    Returns
-    -------
-    TYPE
-        DESCRIPTION.
+#     Returns
+#     -------
+#     TYPE
+#         DESCRIPTION.
 
-    '''
+#     '''
 
-    # Switching to minimally correlated frequencies seleciton algorithm from LPF
-    # # Number of interior knots
-    # # n_knots = 12 # check number of knots
-    # # # Total number of knots
-    # # n_coeffs = n_knots + 2
-    # # # Frequencies
-    # # logf_knots = np.linspace(np.log(fmin), np.log(fmax), n_coeffs) # check knots location
+#     # Switching to minimally correlated frequencies seleciton algorithm from LPF
+#     # # Number of interior knots
+#     # # n_knots = 12 # check number of knots
+#     # # # Total number of knots
+#     # # n_coeffs = n_knots + 2
+#     # # # Frequencies
+#     # # logf_knots = np.linspace(np.log(fmin), np.log(fmax), n_coeffs) # check knots location
 
-    # Switching to minimally correlated frequencies selection algorithm from LPF
-    logf_knots = np.log(choose_freqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
-    n_coeffs = len(logf_knots)
-    # redefine fmin, fmax, ip
-    fmin = np.exp(logf_knots[0])
-    fmax = np.exp(logf_knots[-1])
-    # skip padding
-    skip = 21000   
-    # interp kwargs
-    kwargs = {'kind':'cubic',
-            "axis":-1,
-            "copy":True,
-            "bounds_error": False,
-            "fill_value": "extrapolate",
-            "assume_sorted": True}
-    # basis function
-    basis_func = interpolate.interp1d(logf_knots, np.eye(n_coeffs), **kwargs)
+#     # Switching to minimally correlated frequencies selection algorithm from LPF
+#     logf_knots = np.log(choose_freqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
+#     n_coeffs = len(logf_knots)
+#     # redefine fmin, fmax, ip
+#     fmin = np.exp(logf_knots[0])
+#     fmax = np.exp(logf_knots[-1])
+#     # skip padding
+#     skip = 21000   
+#     # interp kwargs
+#     kwargs = {'kind':'cubic',
+#             "axis":-1,
+#             "copy":True,
+#             "bounds_error": False,
+#             "fill_value": "extrapolate",
+#             "assume_sorted": True}
+#     # basis function
+#     basis_func = interpolate.interp1d(logf_knots, np.eye(n_coeffs), **kwargs)
     
-    # set up window mask
-    wd = masking.modified_hann(ub-skip-lb-skip, n_wind=n_wind)
-    # apply windowing
-    k2 = np.sum(wd**2)
-    #create frequency array for the FT of the noise stretch
-    f = np.fft.fftfreq(data.shape[0]) / dt
-    # only select chosen frequencies
-    ip = np.where((f>=fmin) & (f <= fmax))[0]
-    # create array of noise stretch dft for each TDI combination
-    n_dft = np.fft.fft(data * wd, data.shape[0]) * np.sqrt(2 * dt / k2)
+#     # set up window mask
+#     wd = masking.modified_hann(ub-skip-lb-skip, n_wind=n_wind)
+#     # apply windowing
+#     k2 = np.sum(wd**2)
+#     #create frequency array for the FT of the noise stretch
+#     f = np.fft.fftfreq(data.shape[0]) / dt
+#     # only select chosen frequencies
+#     ip = np.where((f>=fmin) & (f <= fmax))[0]
+#     # create array of noise stretch dft for each TDI combination
+#     n_dft = np.fft.fft(data * wd, data.shape[0]) * np.sqrt(2 * dt / k2)
     
-    # define design matrix from basis function
-    design_matrix = basis_func(np.log(f[ip])).T
-    # define projector
-    projector = np.linalg.pinv(design_matrix.T.dot(design_matrix)).dot(design_matrix.T)
-    # define Log-periodogram minus mean
-    log_per = np.log(np.asarray([np.abs(n_dft[j][ip])**2 for j in range(3)]).T) + 0.577215
-    # obtain noise coefficients for the stretch
-    noisecoeffs = [np.dot(projector, log_per[:, j]) for j in range(3)]
-    # plot noise stretches and interpolated coefficients
-    if axs is not None:
-        logf_knots = np.log(choose_freqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
-        axs.T[len(noisecoeffs)-1][0].set_title("Noise stretch {n}".format(n = len(noisecoeffs)))
-        for tdi, ax in enumerate(axs.T[len(noisecoeffs)-1]):
-            ax.loglog(f[ip], np.abs(n_dft[tdi][ip])**2, zorder=0, alpha = 0.7)
-            ax.scatter(np.exp(logf_knots), np.exp(noisecoeffs[-1][tdi]), color='tab:orange', zorder=1, s = 10)
-            ax.set_ylabel("PSD")
-        ax.set_xlabel("Frequency [Hz]")
+#     # define design matrix from basis function
+#     design_matrix = basis_func(np.log(f[ip])).T
+#     # define projector
+#     projector = np.linalg.pinv(design_matrix.T.dot(design_matrix)).dot(design_matrix.T)
+#     # define Log-periodogram minus mean
+#     log_per = np.log(np.asarray([np.abs(n_dft[j][ip])**2 for j in range(3)]).T) + 0.577215
+#     # obtain noise coefficients for the stretch
+#     noisecoeffs = [np.dot(projector, log_per[:, j]) for j in range(3)]
+#     # plot noise stretches and interpolated coefficients
+#     if axs is not None:
+#         logf_knots = np.log(choose_freqs(Nmax=Nmax,fmax=fmax,fs=1/dt)[1])
+#         axs.T[len(noisecoeffs)-1][0].set_title("Noise stretch {n}".format(n = len(noisecoeffs)))
+#         for tdi, ax in enumerate(axs.T[len(noisecoeffs)-1]):
+#             ax.loglog(f[ip], np.abs(n_dft[tdi][ip])**2, zorder=0, alpha = 0.7)
+#             ax.scatter(np.exp(logf_knots), np.exp(noisecoeffs[-1][tdi]), color='tab:orange', zorder=1, s = 10)
+#             ax.set_ylabel("PSD")
+#         ax.set_xlabel("Frequency [Hz]")
     
-    # average interpolated coefficients
-    coeffs = np.average(np.asarray(noisecoeffs), axis = 0)
-    # interpolate log f knots
-    log_psd_func = [interpolate.interp1d(logf_knots, c, **kwargs) for c in coeffs]
-    # Define noise function
-    def s_function(freqs, **kwargs):
-        s_list = [np.exp(func(np.log(freqs))) for func in log_psd_func]
-        return s_list
+#     # average interpolated coefficients
+#     coeffs = np.average(np.asarray(noisecoeffs), axis = 0)
+#     # interpolate log f knots
+#     log_psd_func = [interpolate.interp1d(logf_knots, c, **kwargs) for c in coeffs]
+#     # Define noise function
+#     def s_function(freqs, **kwargs):
+#         s_list = [np.exp(func(np.log(freqs))) for func in log_psd_func]
+#         return s_list
 
-    return noisecoeffs
+#     return noisecoeffs
 
 
 class PSDstats():
