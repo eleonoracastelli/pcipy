@@ -31,8 +31,7 @@ from scipy import interpolate
 #     '''
 #     Estimate PSD of a given data stretch, by interpolating the log-periodogram of the data DFT.
 #     Uses minimally correlated frequencies according to the CPSD estimation algorithm originally published in PhysRevLett.120.061101
-    
-#     L Sala, Oct21/Sept22
+    # based off DARR paper
 
 #     Parameters
 #     ----------
