@@ -48,33 +48,6 @@ Refer to plot caption for more details.''',
     
 # if __name__ == "__main__":
 
-# %% 
-
-# To print the logs
-logging.basicConfig()
-logging.getLogger().setLevel(logging.INFO)
-
-# create figure objects
-figs = []
-
-# define function to export figures to pdf 
-# pp = PdfPages('simulation_consolidation_plots.pdf')
-
-# %%
-plt.figure(figsize=(10, 8)) 
-
-plt.axis('off')
-plt.text(0.5,0.6,"Plots from simulation_consolidation.py.",ha='center',va='top')
-plt.text(0.3, 0.45,'''3 days of only noise simulation.
-Different noise configurations (laser + tm + oms noise) vs (baseline).
-Keplerian orbits, with comparison of old vs new orbit files.
-Refer to plot caption for more details.''',
-         ha='left',va='bottom')
-# pp.savefig()
-# plt.close()
-    
-
-
 # %%
 # Sampling time
 dt = 0.25
@@ -211,7 +184,7 @@ ax[0].set_ylabel('TDI')
  
 
 kwargs = {"fs": fs,
-          "window": 'blackman',
+          "window": 'hann',
           "nperseg": instrument_size,
           "detrend": 'constant',
           "return_onesided": True,
@@ -231,6 +204,7 @@ ax[1].legend()
 ax[1].set_xlabel('Frequency [Hz]')
 ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 # pp.savefig(fig)
+
 
 # %% ###################
 # Old orbits - more settings
