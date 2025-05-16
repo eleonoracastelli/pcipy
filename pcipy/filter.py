@@ -151,12 +151,12 @@ class LinearFilter:
         data=np.zeros((self.n_output_channels,ne))
         if method=='dot':
             for ioc in range(self.n_output_channels):
-                print(ioc,self.nleft,self.nright)
+                #print(ioc,self.nleft,self.nright)
                 for i in range(nwid):
                     data[ioc]+=np.dot(self.kernel_compts[ioc,i],input_data.data[:,i:ne+i])
         elif method=='convolve':
             for ioc in range(self.n_output_channels):
-                print(ioc,self.nleft,self.nright,self.kernel_compts.shape,input_data.data.shape)
+                #print(ioc,self.nleft,self.nright,self.kernel_compts.shape,input_data.data.shape)
                 for i in range(self.n_input_channels):
                     data[ioc]+=convolve(self.kernel_compts[ioc,:,i][::-1],input_data.data[i,:],mode='valid')
 
@@ -166,8 +166,67 @@ class LinearFilter:
         return TimeData(data, dt=self.dt, t0=t0, names=self.output_names)
 
 
+class RestrictedFilter(LinearFilter):
+    '''
+    This class allows to generate a version of a linear filter which is restricted to a apply only to
+    a subset of the inputs or outputs.  When applied to a subset of inputs the other input channels are 
+    effectively assumed to vanish.  Initial implementation assumes a constant kernel.
+    '''
 
-            
+    def __init__(self,other, input_names=None,output_names=None):
+
+        if not other.constant_kernel: raise NotImplementedError("Filter restriction not yet implemented for non-constant filters")
+        
+        #We copy everything from other except that we restrict the input or output channels
+        self.nleft = other.nleft
+        self.nright = other.nright
+        if input_names is None:
+            #Do nothing different if None
+            self.input_names = other.input_names
+            self.n_input_channels = other.n_input_channels
+            input_name_map=None
+        else:
+            assert other.input_names is not None, "Cannot restrict input channels on a filter which doesn't have input names."
+            input_name_map=[]
+            for name in input_names:
+                locs=np.array(other.input_names)==name
+                count=np.sum(locs)==1
+                assert count, 'In restricting input channels, found "'+name+'" '+str(count)+' times.'
+                input_name_map.append(np.argmax(locs))
+            if 1:
+                print('Input name mapping:')
+                for i in range(len(input_names)):
+                    print(str(input_name_map[i])+':'+other.input_names[input_name_map[i]]+' --> '+str(i)+':'+input_names[i])
+            self.input_names = input_names
+            self.n_input_channels = len(self.input_names)
+        if output_names is None:
+            #Do nothing different if None
+            self.output_names = other.output_names
+            self.n_output_channels = other.n_output_channels
+            output_name_map=None
+        else:
+            assert other.output_names is not None, "Cannot restrict output channels on a filter which doesn't have output names."
+            output_name_map=[]
+            for name in output_names:
+                locs=np.array(other.output_names)==name
+                count=np.sum(locs)==1
+                assert count, 'In restricting output channels, found "'+name+'" '+str(count)+' times.'
+                output_name_map.append(np.argmax(locs))
+            if 1:
+                print('Output name mapping:')
+                for i in range(len(out_names)):
+                    print(str(output_name_map[i])+':'+other.output_names[output_name_map[i]]+' --> '+str(i)+':'+output_names[i])
+            self.output_names = output_names
+            self.n_output_channels = len(self.output_names)
+
+        kernel_compts=other.kernel_compts
+        if input_name_map is not None: kernel_compts=kernel_compts[:,:,input_name_map]
+        if output_name_map is not None: kernel_compts=kernel_compts[output_name_map,:,:]
+        self.kernel_compts=kernel_compts
+        print('kernel_compts shape changed from',other.kernel_compts.shape,'to',self.kernel_compts)
+        self.constant_kernel=other.constant_kernel
+        self.dt=other.dt
+    
 
         
         

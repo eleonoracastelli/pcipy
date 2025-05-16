@@ -63,7 +63,7 @@ class DeducedTDIFilter(LinearFilter):
             for link in self.mosas_order:
                 in_names.append(f'{chan}_{link}')
         self.in_names=in_names
-        self.input_names=None
+        self.input_names=in_names
         
         self.dt=1/measurements_data.fs
         self.t0=None
