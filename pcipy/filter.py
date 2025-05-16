@@ -37,11 +37,11 @@ class LinearFilter:
 
     def i_of_ref_time(self, time)
 
-    def stencil_at_time(self, tref=None)
+    def kernel_at_time(self, tref=None)
 
-    def generate_stencil_grid(self, tref_start, dtref, nsamp)
+    def generate_kernel_grid(self, tref_start, dtref, nsamp)
 
-    def apply_stencil_for_channels(self,ydata,tref_start,dtref) ##rename to "apply"
+    def apply_kernel_for_channels(self,ydata,tref_start,dtref) ##rename to "apply"
     '''
     def __init__(self, nleft, n_channels, input_names=None, nright=None):
         '''
@@ -54,7 +54,7 @@ class LinearFilter:
         Parameters
         ----------
         nleft : int
-            The left-half width of the applied filter stencil. The output of filtering
+            The left-half width of the applied filter kernel. The output of filtering
             will be shorter than the input series by nleft samples on the left end.
         n_input_channels: int
             The number of channels that the data is expected to be applied to.
@@ -62,7 +62,7 @@ class LinearFilter:
             If provided, the channels of the data provided for filtering can 
             be checked against these names.
         nright : int, OPTIONAL
-            The right-half width of the applied filter stencil. The output of filtering
+            The right-half width of the applied filter kernel. The output of filtering
             will be shorter than the input series by nright samples on the right end.
             By default, nright=nelft
         
@@ -75,13 +75,13 @@ class LinearFilter:
             dt: float
                 In/out data sample rate, verified on filtering and provided
                 with filter output data.
-            stencil_compts: ndarray
-                The components of the convolution stencil realizing the filter.
+            kernel_compts: ndarray
+                The components of the convolution kernel realizing the filter.
                 To be referenced only internally or supplanted by derived class
                 Must be set by derived class if the default apply_filter is
                 to work. 
                 Shape must be (n_output_channels, 1+nleft+nright, n_input_channels)
-            constant_stencil: bool 
+            constant_kernel: bool 
                 If True then no time info is needed to apply the filter 
                 otherwise this but be incorporated in the input_data TimeData 
                 object. Must be true for default apply_filter.
@@ -93,9 +93,9 @@ class LinearFilter:
         self.input_names=input_names
         #Default behavior is mathematically trival, but goes through the motions
         self.n_output_channels=n_input_channels
-        self.stencil_compts=np.zeros((self.n_output_channels,1+nleft+nright))
-        self.stencil_compts[:,nleft]=1
-        self.constant_stencil=True
+        self.kernel_compts=np.zeros((self.n_output_channels,1+nleft+nright))
+        self.kernel_compts[:,nleft]=1
+        self.constant_kernel=True
         self.dt=None
 
     def check_data(self, input_data, verbose=False):
@@ -114,11 +114,11 @@ class LinearFilter:
         if self.dt is not None:
             if self.dt != input_data.dt:
                 if verbose: print('Sampling cadence wrong.')
-        if self.constant_stencil:
+        if self.constant_kernel:
             if input_data.t0 is None:
-                if verbose: print('Unless the stencil is constant the input data must have t0 set to realize the filtering.')
+                if verbose: print('Unless the kernel is constant the input data must have t0 set to realize the filtering.')
         if self.input_names is not None:
-            return self.input_data.match_names(self.input_names,verbose)
+            return input_data.match_names(self.input_names,verbose)
         
         return True
 
@@ -129,7 +129,7 @@ class LinearFilter:
         The default base version of this computes:
           output_data[ioc,i]=
               sum over j in range(-nleft,nright+1):  
-                   stencil[ioc,iic,j] * input_data[iic,i+j]
+                   kernel[ioc,iic,j] * input_data[iic,i+j]
 
         Parameters
         ----------
@@ -142,7 +142,7 @@ class LinearFilter:
             approach using np.dot, or 'convolve' using scipy.signal.convolve 
         '''
         assert self.check_data(input_data), 'Data check was:'+str(self.check_data(input_data,verbose=True))
-        assert self.constant_stencil, 'Base class apply_filter requires a constant stencil.'
+        assert self.constant_kernel, 'Base class apply_filter requires a constant kernel.'
 
         #Not sure what the fastest implementation of this is
         ns=input_data.n_samples()
@@ -153,12 +153,12 @@ class LinearFilter:
             for ioc in range(self.n_output_channels):
                 print(ioc,self.nleft,self.nright)
                 for i in range(nwid):
-                    data[ioc]+=np.dot(self.stencil_compts[ioc,i],input_data.data[:,i:ne+i])
+                    data[ioc]+=np.dot(self.kernel_compts[ioc,i],input_data.data[:,i:ne+i])
         elif method=='convolve':
             for ioc in range(self.n_output_channels):
-                print(ioc,self.nleft,self.nright,self.stencil_compts.shape,input_data.data.shape)
+                print(ioc,self.nleft,self.nright,self.kernel_compts.shape,input_data.data.shape)
                 for i in range(self.n_input_channels):
-                    data[ioc]+=convolve(self.stencil_compts[ioc,:,i][::-1],input_data.data[i,:],mode='valid')
+                    data[ioc]+=convolve(self.kernel_compts[ioc,:,i][::-1],input_data.data[i,:],mode='valid')
 
         else: raise ValueError('Invalid value for "method"')
         t0=None

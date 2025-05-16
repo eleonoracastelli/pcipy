@@ -63,7 +63,7 @@ class TimeData:
                 names=names.reshape((1,-1))
         self.names=names
 
-    def match_names(name_list, verbose=False):
+    def match_names(self, name_list, verbose=False):
         '''
         Check that a version of this object's names exactly matches the list.
         Returns True or False. If verbose, then print an explanation if False.
@@ -72,11 +72,10 @@ class TimeData:
         if self.names is None:
             if verbose: print("Failed. No names available")
             return False
-        if names.shape[1] != len(name_list):
+        if self.names.shape[1] != len(name_list):
             if verbose: print('Failed. Given',len(name_list),"names to match against object's",names.shape[1],'names.')
             return False
-        for nameset in names:
-            if nameset==name_list: return True
+        if np.all(self.names==name_list): return True
         print('Failed. Names did not match.')
 
     def n_channels(self): return self.data.shape[0]
