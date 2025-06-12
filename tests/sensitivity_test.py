@@ -21,13 +21,14 @@ If one wants to compute the full frequency-domain response of all the single-lin
 """
 
 import numpy as np
-import os
+import os, sys
 import healpy as hp
 import h5py
-from backgrounds import utils, loadings, plotting, noise, tdi, analysis, signal
 # from backgrounds import priors, sampling, psd
+sys.path.append('/Users/ecastel2/Documents/virtual-envs/software-install/backgrounds')
+from backgrounds import utils, loadings, plotting, noise, tdi, analysis, signal
 from backgrounds import StochasticBackgroundResponse
-# from lisaorbits import KeplerianOrbits
+from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 import matplotlib.pyplot as plt
 from datetime import datetime
 
@@ -38,89 +39,84 @@ from pytdi.core import LISATDICombination
 
 
 # %% 1. Use Backgrounds
-
+ORB = 'keplerian'
 # %% generate isotropic sky map
-nside = 8
+nside = 12
 npix = hp.nside2npix(nside)
-
 # skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
-
-skymap = np.ones(npix) / np.sqrt(npix)
-
+skymap = np.ones(npix) / np.sqrt(2*npix)
 # %% generate orbit file
 workdir = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations/"
 
-orbits = workdir+"keplerian-orbits.h5"
+orbits = workdir+"sensitivity-test-orbits.h5"
+t0 = 2173211130.0 # s  datetime.datetime(2038, 11, 12, 16, 45, 30)
+orbits_dt = 100_000
+orbits_trim = 100
+orbits_t0 = t0 - orbits_trim * orbits_dt
+orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
 
-measpath = '_measurements_4Hz.h5'
-tdipath =   '_noise_tdi2_4Hz.h5'
-secondpath = '_noise_sec_4Hz.h5'
+if ORB == 'keplerian':
+    OrbitsGenerator = KeplerianOrbits
+elif ORB == 'equalarm':
+    OrbitsGenerator = EqualArmlengthOrbits
 
-substring = ['locking_N1-12_laser_tm_oms', 'all_sky_gw', 'gw']
-sims = ["noise", "all_sky", "point_source"]
-datasets = dict(zip(sims, substring))
+print('***************************************************************************')
+orbitsobj = OrbitsGenerator()
+orbitsobj.write(orbits, dt=orbits_dt, size=orbits_size, t0=orbits_t0, mode="w")
+print('***************************************************************************')
 
-matchfile={}
-dtpath={}
-
-for n,d in zip(substring,datasets):
-    timestamp=[]
-    matchfile[n] = [f for f in os.listdir(workdir) if n in f]
-    for m in matchfile[n]:
-        # pick latest date
-        timestamp.append(datetime.strptime(m[:11], "%Y-%m-%d_"))
-        #print(n, timestamp[n])
-        dtpath[d] = max(timestamp).strftime("%Y-%m-%d_")
-
-print(dtpath)
 # %% Instantiate SGWB class
-sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits)
+
+
+sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits, orbit_interp_order=1)
 # %% build frequency vector
 fnyq = 0
 fmin = -5
-nbins = 1000
+nbins = 5000
 
 freqs = np.logspace(fmin, fnyq, nbins)
-with h5py.File(orbits) as f:
-    t0 = np.ones(1) * (f.attrs['t0'] + 10)  #need an object with a specific length
+t0 = np.ones(1) * (sgwbcls.t0 + 10)  #need an object with a specific length
     
 # %% To compute the response of the link 12 we can use the following method. It takes a few seconds as integration over the sky is numerial: it sums over all pixels of the sky map.
-gplus, gcross = sgwbcls.compute_correlations([12], freqs, t0)
-# get the full correlation matrix
-response = gplus + gcross
+# gplus, gcross = sgwbcls.compute_correlations([12], freqs, t0)
+# # get the full correlation matrix
+# response = gplus + gcross
+
 # %% plot
 
-fig, ax = plt.subplots(1,1)
-ax.loglog(freqs, np.abs(response.flatten()))
-ax.set_xlabel('Frequencies [Hz]')
-ax.set_ylabel(r'$R_{12}(f)$')
-ax.grid()
+# fig, ax = plt.subplots(1,1)
+# ax.loglog(freqs, np.abs(response.flatten()))
+# ax.set_xlabel('Frequencies [Hz]')
+# ax.set_ylabel(r'$R_{12}(f)$')
+# ax.set_title("'12' link SGWB response - sky averaged")
+# ax.grid()
 
 # %% Now let's do it for all links
 gplus, gcross = sgwbcls.compute_correlations(sgwbcls.LINKS, freqs, t0)
 
-response = gplus + gcross
+bgresponse = gplus + gcross
 
 # take a look at the shape of the response
 # this is an array of 6 x 6 matrices (nlinks x nlinks)
-print(response.shape)
-
+print(bgresponse.shape)
 # %% plot
 # response of each link
 fig, ax = plt.subplots(1,1)
 for i, l in enumerate(sgwbcls.LINKS):
-    ax.loglog(freqs, np.abs(response[:, i, i]), label = str(l))
+    ax.loglog(freqs, np.abs(bgresponse[:, i, i]), label = str(l))
 ax.set_xlabel('Frequencies [Hz]')
 ax.set_ylabel(r'$R_{12}(f)$')
+ax.set_title('Signal PSD - sky averaged')
 ax.grid()
 ax.legend()
 
 # correlations among the responses of 12 with all the other links
 fig, ax = plt.subplots(1,1)
 for i, l in enumerate(sgwbcls.LINKS):
-    ax.loglog(freqs, np.abs(response[:, 0, i]), label = str([sgwbcls.LINKS[0],l]))
+    ax.loglog(freqs, np.abs(bgresponse[:, 0, i]), label = str([sgwbcls.LINKS[0],l]))
 ax.set_xlabel('Frequencies [Hz]')
 ax.set_ylabel(r'$R_{12}(f)$')
+ax.set_title('Signal CSD - sky averaged')
 ax.grid()
 ax.legend()
 
@@ -137,7 +133,7 @@ tdimat = sgwbcls.compute_tdi_design_matrix(freqs, t0, gen = '2.0')
 # this is an array of 3 x 3 matrices
 #  Rtdi = Mtdi * Rlinks * Mtdi'
 # (ncombs x ncombs) = (ncombs x nlinks) * (nlinks x nlinks) * (nlinks x ncombs)
-tdiresponse = utils.transform_covariance(tdimat, response)
+tdiresponse = utils.transform_covariance(tdimat, bgresponse)
 
 # look at the shapes
 tdimat.shape, tdiresponse.shape
@@ -145,18 +141,18 @@ tdimat.shape, tdiresponse.shape
 # %% plot tdi response
 fig, ax = plt.subplots(1,1)
 for i, t in enumerate(['X', 'Y', 'Z']):
-    ax.loglog(freqs, np.abs(tdiresponse[:, 0, 0]), label = "R_X{t}".format(t = t))
+    ax.loglog(freqs, np.abs(tdiresponse[:, 0, i]), label = "R_X{t}".format(t = t))
 ax.set_xlabel('Frequencies [Hz]')
 ax.set_ylabel(r'$R_{tdi, X}(f)$')
-ax.set_ylim([1e-15, 500])
-ax.set_xlim([2e-5, 1e0])
+ax.set_ylim([1e-17, 500])
+ax.set_xlim([2e-5, 2e0])
 ax.grid()
+ax.set_title('TDI X, Y, Z response - sky averaged')
 ax.legend()
 
-
-    # print(m)
-    # fr=np.array([0.00010, 0.00100, 0.01000, 0.10000, 1.00000])
-    # f = np.logspace(faxis[m][0],faxis[m][1], 1000 )
+# print(m)
+# fr=np.array([0.00010, 0.00100, 0.01000, 0.10000, 1.00000])
+# f = np.logspace(faxis[m][0],faxis[m][1], 1000 )
     
 # %% Compute SGWB background PSD in TDI
 
@@ -172,7 +168,8 @@ sh = signal.sgwb_psd(freqs, spec_index=0.5, freq0=1e-3, omega_gw=1e-14)
 fig, ax = plt.subplots(1,1)
 ax.loglog(freqs, sh, label = r"$S_h(f)$")
 ax.set_xlabel('Frequencies [Hz]')
-ax.set_ylabel(r'Strain PSD Hz$^{-1}$')
+ax.set_ylabel(r'PSD Hz$^{-1}$')
+ax.set_title('Strain PSD - SGWB')
 ax.grid()
 ax.legend()
 
@@ -185,6 +182,7 @@ fig, ax = plt.subplots(1,1)
 ax.loglog(freqs, np.abs(tdicovariance[:,0,0]), label=r"$S_{XX}$")
 ax.set_xlabel('Frequencies [Hz]')
 ax.set_ylabel(r'TDI PSD Hz$^{-1}$')
+ax.set_title('TDI covariance from the SGWB')
 ax.grid()
 ax.legend()
 
@@ -244,6 +242,7 @@ ax.loglog(freqs, (np.abs(cov_tdi_n[:, 0, 0])),
 ax.set_ylim([1e-45,1e-35])
 ax.set_xlabel('Frequencies [Hz]')
 ax.set_ylabel(r'TDI PSD Hz$^{-1}$')
+ax.set_title('TDI PSD')
 ax.grid()
 ax.legend()
 
@@ -252,9 +251,9 @@ ax.legend()
 S_hx = np.sqrt((np.abs(cov_tdi_n[:,0,0])/np.abs(tdiresponse[:,0,0])))
 
 fig, ax = plt.subplots(1,1)
-ax.loglog(freqs, S_hx*np.sqrt(4*np.pi), label=r"$S_{h,X}$")
+ax.loglog(freqs, S_hx, label=r"$S_{h,X}$")
 ax.set_xlabel('Frequencies [Hz]')
-ax.set_ylabel(r'Sensitivity')
+ax.set_ylabel(r'TDI X Sensitivity')
 ax.grid()
 ax.legend()
 
@@ -276,18 +275,21 @@ print(signal_cov_eta.shape)
 
 # %%
 
-fig, ax = plt.subplots(1,1)
+fig, ax = plt.subplots(1,1, figsize=(8,6))
 for i, l in enumerate(sgwbcls.LINKS):
-    ax.loglog(freqs, np.abs(signal_cov_eta[0, :, i, i]), label = str(l))
+    ax.loglog(freqs, np.abs(signal_cov_eta[0, :, i, i]), label = str(l)+' segwo')
+    ax.loglog(freqs, np.abs(bgresponse[:, i, i]), ls='--', label=str(l)+'backgrounds')
+    print(np.abs(bgresponse[:, i, i])/np.abs(signal_cov_eta[0, :, i, i]))
 ax.set_xlabel('Frequencies [Hz]')
 ax.set_ylabel(r'Signal PSD for each link')
 ax.grid()
 ax.legend()
 
 
-fig, ax = plt.subplots(1,1)
+fig, ax = plt.subplots(1,1, figsize=(8,6))
 for i, l in enumerate(sgwbcls.LINKS):
-    ax.loglog(freqs, np.abs(signal_cov_eta[0, :, 0, i]), label = '12, '+str(l))
+    ax.loglog(freqs, np.abs(signal_cov_eta[0, :, 0, i]), label = '12, '+str(l)+' segwo')
+    ax.loglog(freqs, np.abs(bgresponse[:, 0, i]), ls='--', label='12, '+str(l)+' backgrounds')
 ax.set_xlabel('Frequencies [Hz]')
 ax.set_ylabel(r'Signal CSD for 12 with each link')
 ax.grid()
@@ -307,6 +309,22 @@ eta2xyz = segwo.cov.construct_mixing_from_pytdi(
 eta2xyz.shape
 
 # %%
+TDI_LABELS = ["X", "Y", "Z"]
+for i, t in enumerate(TDI_LABELS):
+    fig, axs = plt.subplots(6,1, figsize=(8,6))
+    j=0
+    ax = axs[j]
+    ax.set_title(r'{t} Mixing matrix to each link'.format(t=t))
+    for j, l in enumerate(sgwbcls.LINKS):
+        ax = axs[j]
+        ax.loglog(freqs, np.abs(eta2xyz[0, :, i, j]), label = str(t)+'-'+str(l)+' segwo')
+        ax.loglog(freqs, np.abs(tdimat[:, i, j]), ls='--', label=str(t)+'-'+str(l)+' backgrounds')
+        # print(np.abs(bgresponse[:, i, i])/np.abs(signal_cov_eta[0, :, i, i]))
+        ax.set_xlabel('Frequencies [Hz]')
+        ax.grid()
+        ax.legend(loc='upper left')
+
+# %%
 # We use the mixing matrix to project the eta covariance into the TDI variables
 signal_cov_xyz = segwo.cov.project_covariance(signal_cov_eta, eta2xyz)
 
@@ -316,34 +334,38 @@ signal_cov_xyz.shape
 
 # %%
 
-TDI_LABELS = ["X", "Y", "Z"]
 
-fig, ax = plt.subplots(1,1)
+
+j=0
+fig, ax = plt.subplots(3,1, figsize=(10,8), sharex=True)
 # Plotting the signal PSD for each TDI channel
-for i, tdi in enumerate(TDI_LABELS):
-    ax.loglog(freqs, np.abs(signal_cov_xyz[0, :, i, i]), label=f"PSD TDI {tdi}")
+for i, tdi in enumerate(TDI_LABELS[:1]):
+    ax[j].loglog(freqs, np.abs(signal_cov_xyz[0, :, i, i]), label=f"PSD TDI {tdi} segwo")
+   
 
 # Plotting the signal CSD between TDI channels
-for i, tdi_i in enumerate(TDI_LABELS):
+for i, tdi_i in enumerate(TDI_LABELS[:1]):
     for j, tdi_j in enumerate(TDI_LABELS):
         if i < j:
-            ax.loglog(
+            ax[j].loglog(
                 freqs,
                 np.abs(signal_cov_xyz[0, :, i, j]),
-                "--",
-                label=f"CSD TDI {tdi_i} with {tdi_j}",
+                "-",
+                label=f"segwo",
             )
+        ax[j].loglog(freqs, np.abs(tdiresponse[:, 0, j]), ls='--', label = "backgrounds".format(t = tdi_j))
+        ax[j].set_ylabel("R_X{t}".format(t = tdi_j))
+        ax[j].legend()
+        ax[j].grid()
 
-ax.set_xlabel("Frequency [Hz]")
-ax.set_ylabel("Signal PSD/CSD [/Hz]")
-ax.set_title("Signal PSD/CSD for each TDI channel")
-ax.legend()
-ax.grid()
+ax[j].set_xlabel("Frequency [Hz]")
+ax[0].set_title("TDI response for each channel")
+fig.tight_layout()
 
 # %%
 # Directly compute the signal covariance in the TDI variables
 shortcut_signal_cov_xyz = segwo.response.compute_isotropic_signal_cov(
-    freqs, ltts, positions, mixings=eta2xyz
+    freqs, ltts, positions, mixings=eta2xyz, nside=nside
 )
 
 # We find they give identical results (no exception is raised)
@@ -446,9 +468,14 @@ noise_cov_xyz.shape
 plt.figure(figsize=(10, 6))
 
 # Plot the noise PSD for each TDI channel
-for i, tdi in enumerate(TDI_LABELS):
-    plt.loglog(freqs, np.abs(noise_cov_xyz[0, :, i, i]), label=f"PSD TDI {tdi}")
+for i, tdi in enumerate(TDI_LABELS[:1]):
+    plt.loglog(freqs, np.abs(noise_cov_xyz[0, :, i, i]), label=f"segwo {tdi}")
 
+
+plt.loglog(freqs, (np.abs(cov_tdi_n[:, 0, 0])),
+            label="backgrounds X",
+            color="tab:orange",
+            linestyle='dashed')
 # Plot the noise CSD between TDI channels
 # for i, tdi_i in enumerate(TDI_LABELS):
 #     for j, tdi_j in enumerate(TDI_LABELS):
@@ -462,7 +489,7 @@ for i, tdi in enumerate(TDI_LABELS):
 
 plt.xlabel("Frequency [Hz]")
 plt.ylabel("Noise PSD/CSD [/Hz]")
-plt.title("Noise PSD/CSD for each TDI channel")
+plt.title("Noise PSD/CSD for TDI X")
 plt.legend()
 plt.grid()
 plt.show()
@@ -528,12 +555,15 @@ sensivity_xyz = segwo.sensitivity.compute_sensitivity_from_covariances(
 # frequencies
 sensivity_xyz.shape
 
+sensitivity_x = segwo.sensitivity.compute_sensitivity_from_covariances(noise_cov_xyz[:, :, :1, 0:1], signal_cov_xyz[:, :, 0:1, 0:1])
+    
 # %% Plot the optimal sensitivity curve for XYZ
 plt.figure(figsize=(10, 6))
-plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo sensitivity")
-plt.loglog(freqs, S_hx, label="backgrounds sensitivity")
+# plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo sensitivity")
+plt.loglog(freqs, np.sqrt(sensitivity_x[0]), label="segwo sensitivity X")
+plt.loglog(freqs, S_hx, label="backgrounds sensitivity X")
 plt.xlabel("Frequency [Hz]")
-plt.ylabel("Strain sensitivity [1/sqrt(Hz)]")
+plt.ylabel("TDI X sensitivity [1/sqrt(Hz)]")
 plt.title("KeplerianOrbits orbit file")
 plt.legend()
 plt.grid()
