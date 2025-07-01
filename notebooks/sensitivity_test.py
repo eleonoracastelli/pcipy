@@ -28,6 +28,7 @@ import h5py
 sys.path.append('/Users/ecastel2/Documents/virtual-envs/software-install/backgrounds')
 from backgrounds import utils, loadings, plotting, noise, tdi, analysis, signal
 from backgrounds import StochasticBackgroundResponse
+from backgrounds.tdi import convert
 from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -69,6 +70,8 @@ print('*************************************************************************
 
 
 sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits, orbit_interp_order=1)
+
+
 # %% build frequency vector
 fnyq = 0
 fmin = -5
@@ -126,6 +129,10 @@ ax.legend()
 # Algebraically, this transformation can be written in the (time-)frequency domain using a matrix operation:
 # If you have already computed the single-link responses like above, you can simply compute the TDI transfer function (for X, Y, Z) and then apply it through the equation above:
 
+bgresponse_ordered = bgresponse[..., convert, :]
+bgresponse_ordered = bgresponse_ordered[..., convert]    
+
+
 # tdi transfer function at frequencies freqs and time t0
 # this is an array of 3 x 6 matrices (ncombs x nlinks)
 tdimat = sgwbcls.compute_tdi_design_matrix(freqs, t0, gen = '2.0')
@@ -133,7 +140,7 @@ tdimat = sgwbcls.compute_tdi_design_matrix(freqs, t0, gen = '2.0')
 # this is an array of 3 x 3 matrices
 #  Rtdi = Mtdi * Rlinks * Mtdi'
 # (ncombs x ncombs) = (ncombs x nlinks) * (nlinks x nlinks) * (nlinks x ncombs)
-tdiresponse = utils.transform_covariance(tdimat, bgresponse)
+tdiresponse = utils.transform_covariance(tdimat, bgresponse_ordered)
 
 # look at the shapes
 tdimat.shape, tdiresponse.shape
@@ -345,15 +352,18 @@ for i, tdi in enumerate(TDI_LABELS[:1]):
 
 # Plotting the signal CSD between TDI channels
 for i, tdi_i in enumerate(TDI_LABELS[:1]):
+    print(i)
     for j, tdi_j in enumerate(TDI_LABELS):
+        print(j)
         if i < j:
+            print(j)
             ax[j].loglog(
                 freqs,
                 np.abs(signal_cov_xyz[0, :, i, j]),
                 "-",
                 label=f"segwo",
             )
-        ax[j].loglog(freqs, np.abs(tdiresponse[:, 0, j]), ls='--', label = "backgrounds".format(t = tdi_j))
+        ax[j].loglog(freqs, np.abs(tdiresponse[:, i, j]), ls='--', label = "backgrounds".format(t = tdi_j))
         ax[j].set_ylabel("R_X{t}".format(t = tdi_j))
         ax[j].legend()
         ax[j].grid()
