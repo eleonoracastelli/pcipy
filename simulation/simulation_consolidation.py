@@ -3,8 +3,23 @@
 """
 Created on Tue Mar 25 16:08:39 2025
 
-Consolidate and test simulation scripts for PCIpy.
-@author: ecastel2
+Copyright 2025 E Castelli
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+File: simulation_consolidation.py
+Purpose: Consolidate and test simulation scripts for PCIpy.
+
 """
 # %%
 import logging
@@ -21,7 +36,7 @@ from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
 from pytdi import Data
 
-# %% 
+# %%
 
 # To print the logs
 logging.basicConfig()
@@ -30,11 +45,11 @@ logging.getLogger().setLevel(logging.INFO)
 # create figure objects
 figs = []
 
-# define function to export figures to pdf 
+# define function to export figures to pdf
 # pp = PdfPages('simulation_consolidation_plots.pdf')
 
 # %%
-plt.figure(figsize=(10, 8)) 
+plt.figure(figsize=(10, 8))
 
 plt.axis('off')
 plt.text(0.5,0.6,"Plots from simulation_consolidation.py.",ha='center',va='top')
@@ -45,7 +60,7 @@ Refer to plot caption for more details.''',
          ha='left',va='bottom')
 # pp.savefig()
 # plt.close()
-    
+
 # if __name__ == "__main__":
 
 # %%
@@ -83,8 +98,8 @@ orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
 orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year, for illustration purposes
 
 # %% Choose orbit file
-# TO DO double check that the keplerian orbits match the orbits simulation 
-# parameters in LISA-LCST-SGS-RP-006 
+# TO DO double check that the keplerian orbits match the orbits simulation
+# parameters in LISA-LCST-SGS-RP-006
 datadir = '/Users/ecastel2/Documents/research/GSFC/simulation-tests/orbits/'
 
 
@@ -119,7 +134,7 @@ with h5py.File(orbits) as f:
 
 # noise parameters to turn selected noises back on
 # locking='six'
-# oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)        
+# oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)
 # tm_asds=2.4E-15
 # laser_asds=30
 
@@ -146,10 +161,10 @@ moc_time_correlation_asds = 0.042
 # Instantiate LISA instrument
 instr = Instrument(size=instrument_size,
                     dt=dt,
-                    t0=orbit_t0+1000,#instrument_t0, 
-                    lock=locking, 
+                    t0=orbit_t0+1000,#instrument_t0,
+                    lock=locking,
                     orbits=orbits)
-        
+
 # Disable all noises
 instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
 instr.simulate()
@@ -171,7 +186,7 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
- 
+
 ax[0].set_title('Laser + tm + oms noise - old orbit file')
 
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
@@ -181,7 +196,7 @@ ax[0].grid()
 ax[0].legend()
 ax[0].set_xlabel('Time [s]')
 ax[0].set_ylabel('TDI')
- 
+
 
 kwargs = {"fs": fs,
           "window": 'hann',
@@ -214,16 +229,16 @@ ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 instr = Instrument(size=instrument_size,
                    seed = simseed,
                     dt=dt,
-                    t0=orbit_t0+1000, 
-                    lock=locking, 
-                    orbits=orbits, 
+                    t0=orbit_t0+1000,
+                    lock=locking,
+                    orbits=orbits,
                     aafilter=('kaiser', 240, 1.1, 2.9),
                     clock_offsets={'1':clock_offsets[0],
                                    '2':clock_offsets[1],
                                    '3':clock_offsets[2]},
                     ranging_biases=ranging_biases,
                     moc_time_correlation_asds = moc_time_correlation_asds)
-        
+
 # Disable all noises
 instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
 instr.simulate()
@@ -243,7 +258,7 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 # %% plot for old orbits - more settings
 tdi_times = np.arange(n_data)*dt
 
-fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False) 
+fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
 ax[0].set_title('Laser + tm + oms noise - old orbits - full simulation settings')
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
 ax[0].plot(tdi_times, y_noise[pytdi_trim:], label = 'Y', alpha = 0.5)
@@ -252,7 +267,7 @@ ax[0].grid()
 ax[0].legend()
 ax[0].set_xlabel('Time [s]')
 ax[0].set_ylabel('TDI')
- 
+
 
 kwargs = {"fs": fs,
           "window": 'blackman',
@@ -273,28 +288,28 @@ ax[1].legend()
 # ax[1].set_xlim([1e-5, 1e-1])
 # ax[1].set_ylim([1e-25, 1e-17])
 ax[1].set_xlabel('Frequency [Hz]')
-ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 
 # pp.savefig(fig)
 
 # %% ###################
-# New orbits 
+# New orbits
 ########################
 
 # Instantiate LISA instrument
 instr = Instrument(size=instrument_size,
                    seed = simseed,
                     dt=dt,
-                    t0=instrument_t0, 
-                    lock=locking, 
-                    orbits=datadir+"new-orbits.h5", 
+                    t0=instrument_t0,
+                    lock=locking,
+                    orbits=datadir+"new-orbits.h5",
                     aafilter=('kaiser', 240, 1.1, 2.9),
                     clock_offsets={'1':clock_offsets[0],
                                    '2':clock_offsets[1],
                                    '3':clock_offsets[2]},
                     ranging_biases=ranging_biases,
                     moc_time_correlation_asds = moc_time_correlation_asds)
-        
+
 # Disable all noises
 instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
 instr.simulate()
@@ -315,7 +330,7 @@ z_noise = Z_data(data_noise.measurements) / central_freq
 tdi_times = np.arange(n_data)*dt
 
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex = False)
- 
+
 ax[0].set_title('Laser + tm + oms noise - new orbits')
 
 ax[0].plot(tdi_times, x_noise[pytdi_trim:], label = 'X', alpha = 0.5)
@@ -325,7 +340,7 @@ ax[0].grid()
 ax[0].legend()
 ax[0].set_xlabel('Time [s]')
 ax[0].set_ylabel('TDI')
- 
+
 
 kwargs = {"fs": fs,
           "window": 'blackman',
@@ -346,7 +361,7 @@ ax[1].legend()
 # ax[1].set_xlim([1e-5, 1e-1])
 # ax[1].set_ylim([1e-25, 1e-17])
 ax[1].set_xlabel('Frequency [Hz]')
-ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 # pp.savefig(fig)
 
 
@@ -384,7 +399,7 @@ ax[0].grid()
 ax[0].legend()
 ax[0].set_xlabel('Time [s]')
 ax[0].set_ylabel('TDI')
- 
+
 
 kwargs = {"fs": fs,
           "window": 'blackman',
@@ -405,7 +420,7 @@ ax[1].legend()
 # ax[1].set_xlim([1e-5, 1e-1])
 # ax[1].set_ylim([1e-25, 1e-17])
 ax[1].set_xlabel('Frequency [Hz]')
-ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 # pp.savefig(fig)
 
 
@@ -424,9 +439,9 @@ for nn in noises:
     instr = Instrument(size=instrument_size,
                         seed = simseed,
                         dt=dt,
-                        t0=instrument_t0, 
-                        lock=locking, 
-                        orbits=datadir+"new-orbits.h5", 
+                        t0=instrument_t0,
+                        lock=locking,
+                        orbits=datadir+"new-orbits.h5",
                         aafilter=('kaiser', 240, 1.1, 2.9),
                         clock_offsets={'1':clock_offsets[0],
                                        '2':clock_offsets[1],
@@ -434,8 +449,8 @@ for nn in noises:
                         ranging_biases=ranging_biases,
                         moc_time_correlation_asds = moc_time_correlation_asds
                     )
-            
-    instr.disable_all_noises(excluding=nn) 
+
+    instr.disable_all_noises(excluding=nn)
     instr.simulate()
     #
 
@@ -449,7 +464,7 @@ for nn in noises:
     x_noise = X_data(data_noise.measurements) / central_freq
     # y_noise = Y_data(data_noise.measurements)  / central_freq
     # z_noise = Z_data(data_noise.measurements)  / central_freq
-    
+
     #
     tdi_times = np.arange(n_data)*dt
 
@@ -463,19 +478,19 @@ for nn in noises:
     ax[0].legend()
     ax[0].set_xlabel('Time [s]')
     ax[0].set_ylabel('TDI')
-     
-    
+
+
     kwargs = {"fs": fs,
               "window": 'blackman',
               "nperseg": instrument_size,
               "detrend": 'constant',
               "return_onesided": True,
               "scaling": 'density'}
-    
+
     f, xpsd = signal.welch(x_noise[pytdi_trim:], **kwargs)
     # f, ypsd = signal.welch(y_noise[pytdi_trim:], **kwargs)
     # f, zpsd = signal.welch(z_noise[pytdi_trim:], **kwargs)
-    
+
     ax[1].loglog(f[1:], np.sqrt(xpsd[1:]), label = 'X {nn}'.format(nn=nn))
     # ax[1].loglog(f[1:], np.sqrt(ypsd[1:]), label = 'Y')
     # ax[1].loglog(f[1:], np.sqrt(zpsd[1:]), label = 'Z')
@@ -484,9 +499,9 @@ for nn in noises:
     # ax[1].set_xlim([1e-5, 1e-1])
     # ax[1].set_ylim([5e-27, 5e-17])
     ax[1].set_xlabel('Frequency [Hz]')
-    ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+    ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
     # pp.savefig(fig)
- 
+
     sumpsd += xpsd
 
 # %% disable laser noise by rerunning the simulation
@@ -495,9 +510,9 @@ for nn in noises:
 instr = Instrument(size=instrument_size,
                    seed = simseed,
                     dt=dt,
-                    t0=instrument_t0, 
-                    lock=locking, 
-                    orbits=datadir+"new-orbits.h5", 
+                    t0=instrument_t0,
+                    lock=locking,
+                    orbits=datadir+"new-orbits.h5",
                     aafilter=('kaiser', 240, 1.1, 2.9),
                     clock_offsets={'1':clock_offsets[0],
                                    '2':clock_offsets[1],
@@ -532,7 +547,7 @@ ax[0].grid()
 ax[0].legend()
 ax[0].set_xlabel('Time [s]')
 ax[0].set_ylabel('TDI')
- 
+
 
 kwargs = {"fs": fs,
           "window": 'blackman',
@@ -553,7 +568,7 @@ ax[1].legend()
 # ax[1].set_xlim([1e-5, 1e-1])
 # ax[1].set_ylim([5e-27, 5e-12])
 ax[1].set_xlabel('Frequency [Hz]')
-ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 # pp.savefig(fig)
 
 # %%
@@ -567,7 +582,7 @@ ax.legend()
 # ax[0].set_xlim([1e-5, 1e-1])
 ax.set_ylim([5e-27, 5e-17])
 ax.set_xlabel('Frequency [Hz]')
-ax.set_ylabel(r'$S_\text{TDI}(f)$') 
+ax.set_ylabel(r'$S_\text{TDI}(f)$')
 # pp.savefig(fig)
 
 # %%
@@ -579,9 +594,9 @@ for nn in noises:
     instr = Instrument(size=instrument_size,
                    seed = simseed,
                     dt=dt,
-                    t0=instrument_t0, 
-                    lock=locking, 
-                    orbits=datadir+"new-orbits.h5", 
+                    t0=instrument_t0,
+                    lock=locking,
+                    orbits=datadir+"new-orbits.h5",
                     aafilter=('kaiser', 240, 1.1, 2.9),
                     clock_offsets={'1':clock_offsets[0],
                                    '2':clock_offsets[1],
@@ -589,8 +604,8 @@ for nn in noises:
                     ranging_biases=ranging_biases,
                     moc_time_correlation_asds = moc_time_correlation_asds
                     )
-            
-    instr.disable_all_noises(excluding=nn) 
+
+    instr.disable_all_noises(excluding=nn)
     instr.simulate()
     #
 
@@ -605,7 +620,7 @@ for nn in noises:
     x_noise = X_data(data_noise.measurements) / central_freq
     y_noise = Y_data(data_noise.measurements)  / central_freq
     z_noise = Z_data(data_noise.measurements)  / central_freq
-    
+
     #
     tdi_times = np.arange(n_data)*dt
 
@@ -618,19 +633,19 @@ for nn in noises:
     ax[0].legend()
     ax[0].set_xlabel('Time [s]')
     ax[0].set_ylabel('TDI')
-     
-    
+
+
     kwargs = {"fs": fs,
               "window": 'blackman',
               "nperseg": instrument_size,
               "detrend": 'constant',
               "return_onesided": True,
               "scaling": 'density'}
-    
+
     f, xpsd = signal.welch(x_noise[pytdi_trim:], **kwargs)
     f, ypsd = signal.welch(y_noise[pytdi_trim:], **kwargs)
     f, zpsd = signal.welch(z_noise[pytdi_trim:], **kwargs)
-    
+
     ax[1].loglog(f[1:], np.sqrt(xpsd[1:]), label = 'X')
     ax[1].loglog(f[1:], np.sqrt(ypsd[1:]), label = 'Y')
     ax[1].loglog(f[1:], np.sqrt(zpsd[1:]), label = 'Z')
@@ -639,7 +654,7 @@ for nn in noises:
     # ax[1].set_xlim([1e-5, 1e-1])
     ax[1].set_ylim([5e-27, 5e-17])
     ax[1].set_xlabel('Frequency [Hz]')
-    ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+    ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
     # pp.savefig(fig)
 # %% New orbits - baseline simulation
 ########################
@@ -648,16 +663,16 @@ for nn in noises:
 instr = Instrument(size=instrument_size,
                    seed = simseed,
                     dt=dt,
-                    t0=instrument_t0, 
-                    lock=locking, 
-                    orbits=datadir+"new-orbits.h5", 
+                    t0=instrument_t0,
+                    lock=locking,
+                    orbits=datadir+"new-orbits.h5",
                     aafilter=('kaiser', 240, 1.1, 2.9),
                     clock_offsets={'1':clock_offsets[0],
                                    '2':clock_offsets[1],
                                    '3':clock_offsets[2]},
                     ranging_biases=ranging_biases,
                     moc_time_correlation_asds = moc_time_correlation_asds)
-        
+
 # Disable all noises
 instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', 'ranging', 'backlink', 'clock', 'modulation'])
 instr.simulate()
@@ -685,7 +700,7 @@ ax[0].grid()
 ax[0].legend()
 ax[0].set_xlabel('Time [s]')
 ax[0].set_ylabel('TDI')
- 
+
 
 kwargs = {"fs": fs,
           "window": 'blackman',
@@ -706,7 +721,7 @@ ax[1].legend()
 # ax[1].set_xlim([1e-5, 1e-1])
 # ax[1].set_ylim([5e-27, 5e-12])
 ax[1].set_xlabel('Frequency [Hz]')
-ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 # pp.savefig(fig)
 # %%
 # Disable all noises
@@ -736,7 +751,7 @@ ax[0].grid()
 ax[0].legend()
 ax[0].set_xlabel('Time [s]')
 ax[0].set_ylabel('TDI')
- 
+
 
 kwargs = {"fs": fs,
           "window": 'blackman',
@@ -757,7 +772,7 @@ ax[1].legend()
 # ax[1].set_xlim([1e-5, 1e-1])
 # ax[1].set_ylim([5e-27, 5e-12])
 ax[1].set_xlabel('Frequency [Hz]')
-ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 # pp.savefig(fig)
 
 
@@ -777,9 +792,9 @@ for nn in noises:
     instr = Instrument(size=instrument_size,
                         seed = simseed,
                         dt=dt,
-                        t0=instrument_t0, 
-                        lock=locking, 
-                        orbits=datadir+"new-orbits.h5", 
+                        t0=instrument_t0,
+                        lock=locking,
+                        orbits=datadir+"new-orbits.h5",
                         aafilter=('kaiser', 240, 1.1, 2.9),
                         clock_offsets={'1':clock_offsets[0],
                                        '2':clock_offsets[1],
@@ -787,8 +802,8 @@ for nn in noises:
                         ranging_biases=ranging_biases,
                         moc_time_correlation_asds = moc_time_correlation_asds
                     )
-            
-    instr.disable_all_noises(excluding=nn) 
+
+    instr.disable_all_noises(excluding=nn)
     instr.simulate()
     #
 
@@ -802,7 +817,7 @@ for nn in noises:
     x_noise = X_data(data_noise.measurements) / central_freq
     # y_noise = Y_data(data_noise.measurements)  / central_freq
     # z_noise = Z_data(data_noise.measurements)  / central_freq
-    
+
     #
     tdi_times = np.arange(n_data)*dt
 
@@ -816,19 +831,19 @@ for nn in noises:
     ax[0].legend()
     ax[0].set_xlabel('Time [s]')
     ax[0].set_ylabel('TDI')
-     
-    
+
+
     kwargs = {"fs": fs,
               "window": 'blackman',
               "nperseg": instrument_size,
               "detrend": 'constant',
               "return_onesided": True,
               "scaling": 'density'}
-    
+
     f, xpsd = signal.welch(x_noise[pytdi_trim:], **kwargs)
     # f, ypsd = signal.welch(y_noise[pytdi_trim:], **kwargs)
     # f, zpsd = signal.welch(z_noise[pytdi_trim:], **kwargs)
-    
+
     ax[1].loglog(f[1:], np.sqrt(xpsd[1:]), label = 'X {nn}'.format(nn=nn))
     # ax[1].loglog(f[1:], np.sqrt(ypsd[1:]), label = 'Y')
     # ax[1].loglog(f[1:], np.sqrt(zpsd[1:]), label = 'Z')
@@ -837,12 +852,12 @@ for nn in noises:
     # ax[1].set_xlim([1e-5, 1e-1])
     # ax[1].set_ylim([5e-27, 5e-17])
     ax[1].set_xlabel('Frequency [Hz]')
-    ax[1].set_ylabel(r'$S_\text{TDI}(f)$') 
+    ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
     # pp.savefig(fig)
 
     sumpsd += xpsd
-    
-    
+
+
 # %%
 fig, ax = plt.subplots(1, 1, figsize=(10, 6), sharex = False)
 ax.set_title('Baseline noises - new orbits')
@@ -853,7 +868,7 @@ ax.legend()
 # ax[0].set_xlim([1e-5, 1e-1])
 ax.set_ylim([5e-27, 5e-17])
 ax.set_xlabel('Frequency [Hz]')
-ax.set_ylabel(r'$S_\text{TDI}(f)$') 
+ax.set_ylabel(r'$S_\text{TDI}(f)$')
 # pp.savefig(fig)
 
 # %%
