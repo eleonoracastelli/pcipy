@@ -3,21 +3,22 @@
 """
 Created on Wed May 14 16:56:48 2025
 
-1. Instantiate the SGWB class
-To compute LISA’s response to a SGWB, we need two things:
-    - A sky map defining the background anisotropy (or isotropy) across the sky
-    - An orbit file that defines LISA spacecraft trajectories as a function of time.
+Copyright 2025 Q Baghi E Castelli
 
-2. Compute the response for one link
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-We can compute the single-link responses at frequency
-and time . One of these arguments can be a vector. For example, let’s construct a frequency vector and pick a time:
+    http://www.apache.org/licenses/LICENSE-2.0
 
-3. Compute all links response matrix
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
-If one wants to compute the full frequency-domain response of all the single-links including cross-correlations, the first argument can be replaced by the list of links:
-
-@author: ecastel2
+File: PSDestimator_test.py
+Purpose: Test sensitivity script using backgrounds vs segwo
 """
 
 import numpy as np
@@ -79,7 +80,7 @@ nbins = 5000
 
 freqs = np.logspace(fmin, fnyq, nbins)
 t0 = np.ones(1) * (sgwbcls.t0 + 10)  #need an object with a specific length
-    
+
 # %% To compute the response of the link 12 we can use the following method. It takes a few seconds as integration over the sky is numerial: it sums over all pixels of the sky map.
 # gplus, gcross = sgwbcls.compute_correlations([12], freqs, t0)
 # # get the full correlation matrix
@@ -130,7 +131,7 @@ ax.legend()
 # If you have already computed the single-link responses like above, you can simply compute the TDI transfer function (for X, Y, Z) and then apply it through the equation above:
 
 bgresponse_ordered = bgresponse[..., convert, :]
-bgresponse_ordered = bgresponse_ordered[..., convert]    
+bgresponse_ordered = bgresponse_ordered[..., convert]
 
 
 # tdi transfer function at frequencies freqs and time t0
@@ -160,7 +161,7 @@ ax.legend()
 # print(m)
 # fr=np.array([0.00010, 0.00100, 0.01000, 0.10000, 1.00000])
 # f = np.logspace(faxis[m][0],faxis[m][1], 1000 )
-    
+
 # %% Compute SGWB background PSD in TDI
 
 # Now that we have computed the response matrix of any isotropic SGWB, we can derive the PSD of a SGWB given its strain PSD
@@ -348,7 +349,7 @@ fig, ax = plt.subplots(3,1, figsize=(10,8), sharex=True)
 # Plotting the signal PSD for each TDI channel
 for i, tdi in enumerate(TDI_LABELS[:1]):
     ax[j].loglog(freqs, np.abs(signal_cov_xyz[0, :, i, i]), label=f"PSD TDI {tdi} segwo")
-   
+
 
 # Plotting the signal CSD between TDI channels
 for i, tdi_i in enumerate(TDI_LABELS[:1]):
@@ -393,7 +394,7 @@ oms = (15e-12) ** 2 * displ_2_ffd**2 * (1 + ((2e-3) / freqs) ** 4)
 acc_2_ffd = 1 / (2 * np.pi * freqs * c)
 tm = (3e-15) ** 2 * acc_2_ffd**2 * (1 + (0.4e-3 / freqs) ** 2) * (1 + (freqs / 8e-3) ** 4)
 
-# %% 
+# %%
 
 # Plot the noise PSDs
 # As expected, the OMS noise is much larger dominates at high frequencies, while
@@ -566,7 +567,7 @@ sensivity_xyz = segwo.sensitivity.compute_sensitivity_from_covariances(
 sensivity_xyz.shape
 
 sensitivity_x = segwo.sensitivity.compute_sensitivity_from_covariances(noise_cov_xyz[:, :, :1, 0:1], signal_cov_xyz[:, :, 0:1, 0:1])
-    
+
 # %% Plot the optimal sensitivity curve for XYZ
 plt.figure(figsize=(10, 6))
 # plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo sensitivity")
@@ -578,4 +579,3 @@ plt.title("KeplerianOrbits orbit file")
 plt.legend()
 plt.grid()
 plt.show()
-

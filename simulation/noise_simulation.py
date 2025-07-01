@@ -3,33 +3,47 @@
 """
 Created on Mon Sep  9 16:03:07 2024
 
-Simulation of laser + secondary noises using the LISA Instrument.
+Copyright 2024 E Castelli (based on original 2021 Q Baghi)
 
-Using the Sept 2024 version of the LISA Simulation Suite: 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+File: noise_simulation.py
+Purpose: Simulation of laser + secondary noises using the LISA Instrument.
+
+Using the Sept 2024 version of the LISA Simulation Suite:
     lisainstrument, pyTDI, lisaorbits
 
-This script is meant to substitute the older version of noise_simulation.py 
-Simulation parameters match the simulation parameters defined in 
+This script is meant to substitute the older version of noise_simulation.py
+Simulation parameters match the simulation parameters defined in
 LISA-LCST-SGS-RP-006 "End-to-end Demonstration Data Analysis Pipeline"
 
 Usage:
     Execute simulation with no TDI computation:
-        
+
         python noise_simulation.py path-to-workdir
-        
-    Execute simulation with TDI computation: use flag --tdi to specify TDI generation 
-    
-        python noise_simulation.py path-to-workdir --tdi 2   
-        
+
+    Execute simulation with TDI computation: use flag --tdi to specify TDI generation
+
+        python noise_simulation.py path-to-workdir --tdi 2
+
     Execute simulation with baseline InRep configuration
-    
+
         python noise_simulation.py path-to-workdir --baseline
-        
+
     Execute simulation with baseline InRep configuration an save all individual noise contributions
-    
+
         python noise_simulation.py path-to-workdir --baseline --individual
 
-@author: Q Baghi 2021, modified by E Castelli 2024
 """
 
 import argparse
@@ -92,8 +106,8 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-s", 
-        "--seed", 
+        "-s",
+        "--seed",
         type=int,
         default = None,
         help = "Specify simulation seed")
@@ -115,28 +129,28 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-s", 
-        "--seed", 
+        "-s",
+        "--seed",
         type=int,
         default = None,
         help = "Specify simulation seed")
-    
+
     parser.add_argument(
         "-orb",
         "--orbits",
-        default='keplerian', 
+        default='keplerian',
         choices=['keplerian','equalarm'],
         help="Choose orbit type",
     )
-    
+
     parser.add_argument(
         "-l",
         "--locking",
-        default='N1-12', 
+        default='N1-12',
         choices=['six','N1-12'],
         help="Choose locking configuration",
     )
-    
+
     parser.add_argument(
         "-tdi",
         "--tdi",
@@ -158,7 +172,7 @@ if __name__ == "__main__":
         action="store_true",
         help="Save all secondary noises as individual noise sources",
     )
-    
+
     parser.add_argument(
         "-c",
         "--combined",
@@ -202,7 +216,7 @@ if __name__ == "__main__":
     orbits_trim = 100
     orbits_t0 = t0 - pytdi_trim * dt - orbits_trim * orbits_dt
     orbits_size = np.ceil(3600 * 24 * 365 / orbits_dt) # a year
-    
+
     if args.orbits == 'keplerian':
         OrbitsGenerator = KeplerianOrbits
     elif args.orbits == 'equalarm':
@@ -210,7 +224,7 @@ if __name__ == "__main__":
 
     # Generate new orbits
     orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
-        
+
     # Generate new keplerian orbits
     orbits = args.output_path+"/"+args.orbits+"-orbits.h5"
     print('***************************************************************************')
@@ -229,7 +243,7 @@ if __name__ == "__main__":
     print("*************************************************")
 
     # default parameters are commented here for reference
-    # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)     
+    # oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)
     # tm_asds=2.4E-15
     # laser_asds=30
     clock_offsets=(0,0,0)
@@ -255,14 +269,14 @@ if __name__ == "__main__":
         # clock_freqquaddrifts="default"
         # modulation_asds_left=5.2E-14
         # modulation_asds_right=5.2E-13
-        moc_time_correlation_asds = 0.042 
+        moc_time_correlation_asds = 0.042
     # Instantiate LISA instrument
     instr = Instrument(size=n_data,
                         dt=dt,
-                        t0=instrument_t0, 
+                        t0=instrument_t0,
                         seed = args.seed,
-                        lock=locking, 
-                        orbits=orbits, 
+                        lock=locking,
+                        orbits=orbits,
                         aafilter=('kaiser', 240, args.freq1, args.freq2),
                         clock_offsets={'1':clock_offsets[0],
                                        '2':clock_offsets[1],
@@ -288,7 +302,7 @@ if __name__ == "__main__":
     # # dd/mm/YY H:M:S
 
     lockstr = '_locking_'+locking+'_'
-    
+
     dt_string = now.strftime("%Y-%m-%d_") + args.orbits  +  lockstr + 'laser_tm_oms_'
 
     writepath = args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5'
@@ -420,12 +434,12 @@ if __name__ == "__main__":
     if args.baseline:
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
 
-    
+
     if args.combined:
         print("***** Saving combined noise contribution")
-        
+
         noises = ['test-mass', 'oms']
-        
+
         for n in noises:
             print("***** Simulate laser + {n}".format(n=n))
 
@@ -433,12 +447,12 @@ if __name__ == "__main__":
             instr = Instrument(seed=simseed,
                                size=n_data,
                                 dt=dt,
-                                t0=instrument_t0, 
-                                lock=locking, 
-                                orbits=orbits, 
+                                t0=instrument_t0,
+                                lock=locking,
+                                orbits=orbits,
                                 aafilter=('kaiser', 240, args.freq1, args.freq2))
-                    
-            instr.disable_all_noises(excluding=["laser", n]) 
+
+            instr.disable_all_noises(excluding=["laser", n])
             instr.simulate()
             writepath=args.output_path + '/' + dt_string + 'noise_combined_laser_'+n+'_'+str(int(fs))+'Hz.h5'
             try:
@@ -447,7 +461,7 @@ if __name__ == "__main__":
                 pass
             print("***** write laser + {n}".format(n=n))
             instr.write(writepath)
-       
+
         if args.baseline:
             noises = ['ranging', 'backlink', 'clock', 'modulation']
             for n in noises:
@@ -456,15 +470,15 @@ if __name__ == "__main__":
                 instr = Instrument(seed=simseed,
                                    size=n_data,
                                     dt=dt,
-                                    t0=instrument_t0, 
-                                    lock=locking, 
-                                    orbits=orbits, 
+                                    t0=instrument_t0,
+                                    lock=locking,
+                                    orbits=orbits,
                                     aafilter=('kaiser', 240, args.freq1, args.freq2),
                                     clock_offsets={'1':clock_offsets[0],'2':clock_offsets[1],'3':clock_offsets[2]},
                                     ranging_biases= ranging_biases,
                                     moc_time_correlation_asds = moc_time_correlation_asds)
-                        
-                instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n]) 
+
+                instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n])
                 instr.simulate()
                 writepath=args.output_path + '/' + dt_string + 'noise_combined_lto_'+n+'_'+str(int(fs))+'Hz.h5'
                 try:
@@ -476,9 +490,9 @@ if __name__ == "__main__":
 
     if args.individual:
         print("***** Saving individual noise contribution")
-        
+
         noises = ['laser', 'test-mass', 'oms']
-        
+
         for n in noises:
 
             print("***** Simulate {n}".format(n=n))
@@ -503,7 +517,7 @@ if __name__ == "__main__":
 
             print("***** write {n}".format(n=n))
             instr.write(writepath)
-       
+
         if args.baseline:
             noises = ['ranging', 'backlink', 'clock', 'modulation']
             for n in noises:
