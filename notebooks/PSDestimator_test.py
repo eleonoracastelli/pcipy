@@ -88,7 +88,7 @@ Sxx, Smin, Smax = datpsd.getPSDerrors(cval=0.68)
 # %%
 fig, ax = plt.subplots(1,1, dpi=120)
 ax.plot(f, xpsd, color='tab:orange', zorder=1)
-ax.errorbar(datpsd.freqs, Sxx, 
+ax.errorbar(datpsd.freqs, Sxx,
             yerr=[Sxx-Smin, Smax-Sxx],
             fmt='.', capsize = 3, color="k", zorder=2)
 ax.set_xscale('log')
