@@ -16,7 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 File: utils.py
-
 Purpose: This module provides utility functions for estimating the Power Spectral Density (PSD) of signals.
 
 The functions included in this module facilitate various methods of PSD estimation, including
