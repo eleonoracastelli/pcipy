@@ -1,26 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-utils.py
+Copyright 2024 J Baker E Castelli
 
-This module provides utility functions for estimating the Power Spectral Density (PSD) of signals.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+File: utils.py
+
+Purpose: This module provides utility functions for estimating the Power Spectral Density (PSD) of signals.
+
 The functions included in this module facilitate various methods of PSD estimation, including
 the periodogram, Welch's method, and multitaper methods. These utilities are designed to assist
 researchers and engineers in analyzing the frequency content of signals in various applications.
 
 Classes:
     - PSDStats: class written by Lorenzo Sala in 2021. Used in LPF data analysis and publications: PhysRevLett.120.061101, ...
-        Slightly adapted by E Castelli in 2022.    
+        Slightly adapted by E Castelli in 2022.
         Computes the one-sided Cross Power Spectral Density (CPSD) matrix
         at minimally correlated frequencies, averaging over periodograms. Compute cross-coherences.
-    
-    
+
 Functions:
 - estimate_psd: Estimate PSD of a given data stretch, by interpolating the log-periodogram of the data DFT.
 - choose_freqs: selection of minimally correlated frequencies according to PhysRevLett.120.061101
 
-
-@author: E Castelli, 2025
 """
 
 import numpy as np
@@ -68,7 +80,7 @@ from scipy import interpolate
 #     fmin = np.exp(logf_knots[0])
 #     fmax = np.exp(logf_knots[-1])
 #     # skip padding
-#     skip = 21000   
+#     skip = 21000
 #     # interp kwargs
 #     kwargs = {'kind':'cubic',
 #             "axis":-1,
@@ -78,7 +90,7 @@ from scipy import interpolate
 #             "assume_sorted": True}
 #     # basis function
 #     basis_func = interpolate.interp1d(logf_knots, np.eye(n_coeffs), **kwargs)
-    
+
 #     # set up window mask
 #     wd = masking.modified_hann(ub-skip-lb-skip, n_wind=n_wind)
 #     # apply windowing
@@ -89,7 +101,7 @@ from scipy import interpolate
 #     ip = np.where((f>=fmin) & (f <= fmax))[0]
 #     # create array of noise stretch dft for each TDI combination
 #     n_dft = np.fft.fft(data * wd, data.shape[0]) * np.sqrt(2 * dt / k2)
-    
+
 #     # define design matrix from basis function
 #     design_matrix = basis_func(np.log(f[ip])).T
 #     # define projector
@@ -107,7 +119,7 @@ from scipy import interpolate
 #             ax.scatter(np.exp(logf_knots), np.exp(noisecoeffs[-1][tdi]), color='tab:orange', zorder=1, s = 10)
 #             ax.set_ylabel("PSD")
 #         ax.set_xlabel("Frequency [Hz]")
-    
+
 #     # average interpolated coefficients
 #     coeffs = np.average(np.asarray(noisecoeffs), axis = 0)
 #     # interpolate log f knots
@@ -137,7 +149,7 @@ class PSDstats():
         max frequency to be computed
     fs : TYPE
         sampling frequency
-     win:       
+     win:
         spectral window (function) or None. If None, BH92 is used
 
     Returns
@@ -216,7 +228,7 @@ def bh_lowpass(data, t_win=100,t_sam=5,fs=10):
     assert np.isclose(t_sam*fs,int(t_sam*fs),rtol=1e-5), 'Downsampling time must be multiple of sampling time.'
     assert np.isclose(t_win*fs,int(t_win*fs),rtol=1e-5), 'Windowing time must be multiple of sampling time.'
     assert np.isclose(step_win/step_sam,int(step_win/step_sam),rtol=1e-5), 'Watch out, t_win must be multiple of t_sam.'
-    
+
     dtarr = np.diff(data['t'])
     assert np.isclose(dtarr[0],dt,rtol=1e-5), 'Aaargh, sampling frequency is not consistent with data.' #just check fs
     assert np.allclose(dtarr,dt,rtol=1e-5), 'Aaargh, your data are not equally sampled in time.' #just check sampling time
@@ -239,7 +251,7 @@ def bh_lowpass(data, t_win=100,t_sam=5,fs=10):
 def bh_92(M:int):
     '''
     Mathematical expression of a Blackman-Harris window.
-    
+
     Parameters
     ----------
     M : int
@@ -285,7 +297,7 @@ def bh_92(M:int):
 #     assert np.isclose(t_sam*fs,int(t_sam*fs),rtol=1e-5), 'Downsampling time must be multiple of sampling time.'
 #     assert np.isclose(t_win*fs,int(t_win*fs),rtol=1e-5), 'Windowing time must be multiple of sampling time.'
 #     assert np.isclose(step_win/step_sam,int(step_win/step_sam),rtol=1e-5), 'Watch out, t_win must be multiple of t_sam.'
-    
+
 #     dtarr = np.diff(data['t'])
 #     assert np.isclose(dtarr[0],dt,rtol=1e-5), 'Aaargh, sampling frequency is not consistent with data.' #just check fs
 #     assert np.allclose(dtarr,dt,rtol=1e-5), 'Aaargh, your data are not equally sampled in time.' #just check sampling time
@@ -309,7 +321,7 @@ def bh_92(M:int):
 # def bh92(M:int):
 #     '''
 #     Mathematical expression of a Blackman-Harris window.
-    
+
 #     Parameters
 #     ----------
 #     M : int
@@ -353,9 +365,9 @@ def initcheck(datamat,Tmax,fmax,fs):
 def choose_freqs(Nmax:int,fmax:float,fs:float):
     '''
     Minimally correlated frequencies selection, according to the CPSD estimation algorithm originally published in PhysRevLett.120.061101 and Supplemental Material.
-    
 
-    Returns 
+
+    Returns
 
     Parameters
     ----------
