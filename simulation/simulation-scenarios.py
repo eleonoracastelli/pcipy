@@ -28,7 +28,8 @@ from datetime import datetime
 # %% LOCKING N1-12 default
 # %% equalarm tdi1
 os.system('python simulation/noise_simulation.py ../../../research/GSFC/pci-inrep/simulations --orbits equalarm --tdi 1 --locking "N1-12" --individual --combined')
-# %%
+
+# %% extract seed from the simulation we just ran
 workdir = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations/"
 
 n = 'measurements'
