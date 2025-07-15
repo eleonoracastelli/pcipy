@@ -1,36 +1,52 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Apply PCI to simulated data 
-# ## Investigate the impact of individual noise contributions
-# 
-# Here we apply PCI to data simulated via the LISA Simulation Suite, following the simulation scripts.
-# 
-# The simulated datasets are 3 days long. PCI is applied to 12 hours of data, with 4 hours of skipped data at the beginning of the simulation.
-# 
-# We need the following simulated datasets:
-# - full simulation noise dataset (including laser noise and secondary noises), with filename ending in `_measurements_4Hz.h5`
-# - secondary noises dataset, with filename ending in `_noise_sec_4Hz.h5`
+'''
+Copyright 2024 J Baker E Castelli
 
-# # 0. Installations and data generation
-# 
-# The package dependencies are:
-# 
-#     pip install numpy scipy sympy h5py matplotlib xarray h5py scikit-learn
-#     pip install lisaconstants
-#     pip install lisainstrument
-#     pip install lisagwresponse
-#     pip install pytdi
-#     pip install backgrounds
-# 
-# and after installation, the data generation step is performed by running the simulation scripts: 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-#!python ../simulation/noise_simulation.py /Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations --tdi 2 --baseline --individual
+    http://www.apache.org/licenses/LICENSE-2.0
 
-#!python ../simulation/signal_simulation.py /Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations --tdi 2
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
-#!python ../simulation/all_sky_signal_simulation.py /Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations --tdi 2
+File: pci-single-noise.py
+Purpose: Apply PCI to simulated data and investigate the impact of individual noise contributions
 
+Here we apply PCI to data simulated via the LISA Simulation Suite, following the simulation scripts.
+
+The simulated datasets are 3 days long. PCI is applied to 12 hours of data, with 4 hours of skipped data at the beginning of the simulation.
+
+We need the following simulated datasets:
+- full simulation noise dataset (including laser noise and secondary noises), with filename ending in `_measurements_4Hz.h5`
+- secondary noises dataset, with filename ending in `_noise_sec_4Hz.h5`
+
+# 0. Installations and data generation
+
+The package dependencies are:
+
+    pip install numpy scipy sympy h5py matplotlib xarray h5py scikit-learn
+    pip install lisaconstants
+    pip install lisainstrument
+    pip install lisagwresponse
+    pip install pytdi
+    pip install backgrounds
+
+and after installation, the data generation step is performed by running the simulation scripts:
+
+    !python ../simulation/noise_simulation.py /Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations --tdi 2 --baseline --individual
+
+    !python ../simulation/signal_simulation.py /Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations --tdi 2
+
+    !python ../simulation/all_sky_signal_simulation.py /Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations --tdi 2
+
+'''
 # %% ## 0.1 Settings and imports
 # Importing the relevant packages for the notebook. Setting up work directories.
 
@@ -45,7 +61,7 @@ from datetime import datetime
 from pytdi import Data
 from pytdi.intervar import ETA_SET
 
-from pcipy import plotting, pci_filter, channel_analysis 
+from pcipy import plotting, pci_filter, channel_analysis
 
 # %% Working directories and paths to files
 
@@ -83,10 +99,10 @@ pci_hours=12
 
 
 # %% ## 1. Build data vector of the six LISA single-link channels
-# 
+#
 # To build the data vector of the six LISA single-link channels $\vec{y} = \left[y_{ij}\right]$, with $i,j=1,2,3$ and $i\neq j$ we resort to the intermediary TDI variables $\eta$, implemented within `pytdi` as `ETA_SET`.
-# 
-# 
+#
+#
 # We build the single link $\vec{y}$ data vector for the full noise simulation and for the secondary noises, ending up with two single link vectors:
 # - full simulation single link vector $\vec{y}^{\text{full}}$
 # - secondary noises single link vector $\vec{y}^{\text{sec}}$
@@ -122,7 +138,7 @@ data_noise = Data.from_instrument(simpath)
 fs = data_noise.fs
 
 # We skip the earliest part of the sim which is not representative
-skip = int(skip_hours * 3600 * fs)  
+skip = int(skip_hours * 3600 * fs)
 # build data vector of full simulation data
 y_full = build_data_vector(data_noise, skip=skip, dtype=np.float64)
 # create time vector for plotting
@@ -144,25 +160,25 @@ secpath = workdir + dtpath['noise']+ datasets['noise'] + secondpath
 print(secpath)
 # load data
 data_sec = Data.from_instrument(secpath)
-# build data vector of secondary noises   
+# build data vector of secondary noises
 y_sec = build_data_vector(data_sec, skip=skip, dtype=np.float64)
 
 # %% ### 1.2 Data quicklook
-# 
+#
 # Check the stencil size and take a look at the generated $y$s.
-# 
+#
 # TDI2 fractional delay Lagrange interpolating polynomials are of order `31=1+15*2`
-# 
-# Overall TDI delays are up to 8x single link delay = `8.34 s * 4 Hz * 8` = about 267 sample. Add 15 on each end: `267 + 2*15 = 297` 
-# 
+#
+# Overall TDI delays are up to 8x single link delay = `8.34 s * 4 Hz * 8` = about 267 sample. Add 15 on each end: `267 + 2*15 = 297`
+#
 # TDI2 overall stencil is then about 297 samples
-# 
+#
 # aPCI overall stencil width is `1 + nhalf*2`
 
 # %% Set stencil size and number of samples
 
 nhalf = 45
-ns = int(pci_hours * 3600 * fs) 
+ns = int(pci_hours * 3600 * fs)
 window = np.ones(ns)
 
 # %% # Time series quicklook
@@ -227,33 +243,33 @@ kwargs = {"fs": fs,
 # ax[1].set_ylabel(r'$S_\text{TDI}(f)$')
 
 # %%## 2. Apply PCI to the data
-# 
+#
 # We now resort to {class}`PCIFilter` to evaluate PCI from $\vec{y}$.
-# 
+#
 # An instance of {class}`PCIFilter` has two required inputs:
 # - `ydata`: matrix with the single link LISA temporal phase data streams $\vec{y}$ of length `ns`.
 # - `fs`: sampling rate of the data streams (Hz).
-# 
+#
 # The optional parameters are
 # - `nhalf`: filter stencil halfwidth in samples. The default is 45.
 # - `order`: order of PCI. The default is 1.
 # - `maxcompts`: PCA results will be truncated to this length after initial processing. The default is 10.
 # - `Tscale`: if dt is None, then dt defaults to Tscale/ns
-# 
+#
 # The input channels $\vec{y}$ are stretches of data, usually of length `ns+2*nhalf`, but sometimes varying. The variations are:
 #   - `:` (full length of matrix)
 #   - `0:ns_fixed`
 #   - `0:ns+2*nhalf`
 #   - `skip:skip+ns+2*nhalf`
-#   
+#
 # In every case the window is trivial `np.ones([data lenght])`
-# 
+#
 # Creating an instance of the `PCIFilter` class applies the following methods, in order:
-# 
+#
 # 1. `pcipy.PCIFilter.build_data_matrix`
-# Pre-process $\vec{y}$ data `ydata` to build a matrix of shifted time-series. 
-# 
-# Output is a matrix $\vec{X}$ of size `[n_c * (2*nhalf+1)] x n_s` , 
+# Pre-process $\vec{y}$ data `ydata` to build a matrix of shifted time-series.
+#
+# Output is a matrix $\vec{X}$ of size `[n_c * (2*nhalf+1)] x n_s` ,
 # $$
 # \vec{X} = \begin{bmatrix}
 # y_1(t_0) & y_1(t_1) &y_1(t_2) & \dots & y_1(t_{n_s}) \\
@@ -279,17 +295,17 @@ kwargs = {"fs": fs,
 # \end{bmatrix}
 # $$
 # where $n_c=6$ is the size of the $y$s array, `nhalf=45` is the length of the time-shifting stencil and $n_s$ is the number of data samples in each $y$.
-# 
+#
 # Option to detrend the data or make them zero-mean.
-# 
+#
 # 2. `pcipy.PCIFilter.apply_pca`
-# Apply Principal Component Analysis (PCA) to matrix $\vec{X}$. PCA is applied using the `PCA` class defined within [scikit learn](https://scikit-learn.org/stable/modules/decomposition.html#pca) `sklearn`, which 
-# 
+# Apply Principal Component Analysis (PCA) to matrix $\vec{X}$. PCA is applied using the `PCA` class defined within [scikit learn](https://scikit-learn.org/stable/modules/decomposition.html#pca) `sklearn`, which
+#
 # > is used to decompose a multivariate dataset in a set of successive orthogonal components that explain a maximum amount of the variance. In scikit-learn, PCA is implemented as a transformer object that learns
 # components in its fit method, and can be used on new data to project it on these components.
-# 
+#
 # From `PCA` object, evaluate components and explained variance. Option to sort components by RMS value.
-# 
+#
 # 4. `pcipy.PCIFilter.set_stencil`
 
 # %% ### 2.1 Evaluate PCI on full data
@@ -300,13 +316,13 @@ kwargs = {"fs": fs,
 
 Tscale=10
 pca_list = [pci_filter.PCIFilter(y_full[:ns+2*nhalf, :].T,
-                                 fs=fs, 
-                                 nhalf=nhalf, 
-                                 order=q, 
-                                 maxcompts=10, 
+                                 fs=fs,
+                                 nhalf=nhalf,
+                                 order=q,
+                                 maxcompts=10,
                                  Tscale=Tscale,
                                  sort_by_rms=False,
-                                verbose=True)            
+                                verbose=True)
             for q in range(3)]
 
 #c5demand8 mem peak 77%   ???
@@ -327,12 +343,12 @@ p.components.shape, p.explained_variance.shape, p.channels.shape
 # %% #### 2.1.2 Sort components by RMS
 
 pca_list_rs = [pci_filter.PCIFilter(y_full[:ns+2*nhalf, :].T,
-                                    fs=fs, 
-                                    nhalf=nhalf, 
-                                    order=q, 
-                                    maxcompts=10, 
+                                    fs=fs,
+                                    nhalf=nhalf,
+                                    order=q,
+                                    maxcompts=10,
                                     Tscale=Tscale,
-                                    sort_by_rms=True)            
+                                    sort_by_rms=True)
             for q in range(3)]
 
 #c5demand8 mem peak 77%   ???
@@ -344,32 +360,32 @@ pca_list_rs = [pci_filter.PCIFilter(y_full[:ns+2*nhalf, :].T,
 # %% #### 2.1.3 Detrend the components to get zero mean data
 
 pca_list_zm = [pci_filter.PCIFilter(y_full[:ns+2*nhalf, :].T,
-                                    fs=fs, 
-                                    nhalf=nhalf, 
-                                    order=q, 
-                                    maxcompts=10, 
+                                    fs=fs,
+                                    nhalf=nhalf,
+                                    order=q,
+                                    maxcompts=10,
                                     Tscale=Tscale,
-                                    zero_mean=True)            
+                                    zero_mean=True)
             for q in range(3)]
 
 
 # %% ### 2.2 Plot PCI decomposition
-# 
+#
 # Compare data sorted by variance with data sorted by RMS.
 
-plotting.plotconfig(lbsize=20, lgsize=16, fsize=18, 
+plotting.plotconfig(lbsize=20, lgsize=16, fsize=18,
                     ticklabelsize=20, style='publication',
                     fontfamily = 'STIXGeneral')
 
 fig1, ax1 = plt.subplots(nrows=1)
 
-ax1.plot(pca_list[0].explained_variance, 
+ax1.plot(pca_list[0].explained_variance,
             #linestyle='dashed',
             label=r'aPCI$_0$',
             linewidth=2,
             rasterized=False)
 
-ax1.plot(pca_list[1].explained_variance, 
+ax1.plot(pca_list[1].explained_variance,
             #linestyle='dashed',
             label=r'aPCI$_1$ (1st order)',
             linewidth=2,
@@ -382,13 +398,13 @@ ax1.plot(pca_list[2].explained_variance,
             rasterized=False)
 
 if True:
-    ax1.plot(pca_list_rs[0].explained_variance, 
+    ax1.plot(pca_list_rs[0].explained_variance,
                 linestyle='dashed',
                 label=r'aPCI$_0$ resorted',
                 linewidth=2,
                 rasterized=False)
 
-    ax1.plot(pca_list_rs[1].explained_variance, 
+    ax1.plot(pca_list_rs[1].explained_variance,
                 linestyle='dashed',
                 label=r'aPCI$_1$ resorted (1st order)',
                 linewidth=2,
@@ -401,13 +417,13 @@ if True:
                 rasterized=False)
 
 if False:
-    ax1.plot(pca_list_zm[0].explained_variance, 
+    ax1.plot(pca_list_zm[0].explained_variance,
                 linestyle='dotted',
                 label=r'aPCI$_0$ zm',
                 linewidth=2,
                 rasterized=False)
 
-    ax1.plot(pca_list_zm[1].explained_variance, 
+    ax1.plot(pca_list_zm[1].explained_variance,
                 linestyle='dotted',
                 label=r'aPCI$_1$ zm (1st order)',
                 linewidth=2,
@@ -434,7 +450,7 @@ plt.show()
 
 
 # %% ## 3. Run channel analysis on the PCI output
-# 
+#
 # The channel analysis we run here does the following:
 # - Compare stationarity of the data, for each applied PCI order
 
@@ -445,12 +461,12 @@ ev=100
 filters=[pca_list_rs[o] for o in range(order+1)]
 # select titles for plot
 titles = ['rms_sorted order '+str(o) for o in range(order+1)]
-# apply_for_channels is a function tasked with applying PCI filters to a specific subset of channels 
+# apply_for_channels is a function tasked with applying PCI filters to a specific subset of channels
 # (in this case, the 6 channels with lower variance)
-sets=[np.array(xf.apply_for_channels(y_full[:ns+2*nhalf, :].T, 
+sets=[np.array(xf.apply_for_channels(y_full[:ns+2*nhalf, :].T,
                                      n_channels=6,
                                      zero_mean=False,
-                                     detrend=False)) 
+                                     detrend=False))
       for xf in filters]
 # run channel analysis on selected channels and filter orders
 channel_analysis.stationarity_plots(sets,
@@ -467,11 +483,11 @@ filters=[pca_list_rs[o] for o in range(order+1)]
 # select titles for plot
 titles = ['rms_sorted order '+str(o) for o in range(order+1)]
 
-# apply_for_channels is a function tasked with applying PCI filters to a specific subset of channels 
+# apply_for_channels is a function tasked with applying PCI filters to a specific subset of channels
 # (in this case, the 6 channels with lower variance)
 sets=[np.array(xf.apply_for_channels(y_full[:ns+2*nhalf, :].T,
                                      n_channels=6,
-                                     zero_mean=False,detrend=False)) 
+                                     zero_mean=False,detrend=False))
       for xf in filters]
 # FIX TITLES IN THIS PLOT FUNCTION
 channel_analysis.temporal_variance_corr_plots(sets,
@@ -527,7 +543,7 @@ freqs, y_sec_welch_mat = compute_welch_matrix(y_sec, **kwargs)
 mosas_order = ['12', '23', '31', '13', '21', '32']
 
 # plot config
-plotting.plotconfig(lbsize=20, lgsize=16, fsize=18, 
+plotting.plotconfig(lbsize=20, lgsize=16, fsize=18,
                     ticklabelsize=20, style='publication',
                     fontfamily = 'STIXGeneral')
 
@@ -535,19 +551,19 @@ plotting.plotconfig(lbsize=20, lgsize=16, fsize=18,
 fig, axes = plt.subplots(1, 1, figsize=(10, 6))
 # For APCI
 for i in range(6):
-    axes.loglog(freqs, np.sqrt(y_welch_mat[:, i, i].real), 
-                linewidth=1, 
+    axes.loglog(freqs, np.sqrt(y_welch_mat[:, i, i].real),
+                linewidth=1,
                 label=r'$y_{\mathrm{'+mosas_order[i]+'}}$',
                 rasterized=True)
 plt.gca().set_prop_cycle(None)
 for i in range(6):
-    axes.loglog(freqs, np.sqrt(y_sec_welch_mat[:, i, i].real), 
-                linewidth=1,ls='--', 
+    axes.loglog(freqs, np.sqrt(y_sec_welch_mat[:, i, i].real),
+                linewidth=1,ls='--',
                 label=r'$y_{\mathrm{'+mosas_order[i]+',sec}}$',
                 rasterized=True)
 axes.legend(loc='upper center', ncol=4, frameon=False)
-# axes.grid(linewidth=1, which='both', 
-#           color='gray', 
+# axes.grid(linewidth=1, which='both',
+#           color='gray',
 #           linestyle='dotted')
 axes.set_xlabel("Frequency [Hz]")
 axes.set_ylabel(r"$\mathrm{\sqrt{PSD}}$ [$\mathrm{Hz}^{-1/2}$]")
@@ -568,14 +584,14 @@ filters=[pca_list_rs[order-1],pca_list_rs[order]]
 
 [xf.set_stencil(nchannels) for xf in filters]
 
-sets=[np.array(xf.apply_for_channels(y_full[:ns+2*nhalf, :].T, 
+sets=[np.array(xf.apply_for_channels(y_full[:ns+2*nhalf, :].T,
                                      n_channels=nchannels,
-                                     zero_mean=False,detrend=False)) 
+                                     zero_mean=False,detrend=False))
       for xf in filters]
 
 print("Computing single link")
 # Compute recovered single-link channel vectors from a set of pri-computed PCI channels using the stencil_compts.
-Ysets=[xf.compute_single_links_from_channels(iset) 
+Ysets=[xf.compute_single_links_from_channels(iset)
        for xf,iset in zip(filters,sets)]
 
 titles=['Y_rs'+str(order-1),'Y_rs'+str(order)]
@@ -585,7 +601,7 @@ titles=['Y_rs'+str(order-1),'Y_rs'+str(order)]
 if True:
     Ysets+=[y_sec[nhalf:ns+nhalf, :].T]
     titles+=['Y_raw']
-    
+
 print("Computed single link")
 channel_analysis.stationarity_plots(Ysets,
                                     title=titles)
@@ -601,30 +617,30 @@ freqs1, y_pci1_welch_mat = compute_welch_matrix(Ysets[0].T, **kwargs)
 freqs2, y_pci2_welch_mat = compute_welch_matrix(Ysets[1].T, **kwargs)
 
 # %% Visualize the single-link measurements in frequency domain
-plotting.plotconfig(lbsize=20, lgsize=16, fsize=18, 
+plotting.plotconfig(lbsize=20, lgsize=16, fsize=18,
                     ticklabelsize=20, style='publication',
                     fontfamily = 'STIXGeneral')
 fig, axes = plt.subplots(1, 1, figsize=(10, 6))
 
 # For APCI
 for i in range(6):
-    axes.loglog(freqs, np.sqrt(y_pci1_welch_mat[:, i, i].real), 
+    axes.loglog(freqs, np.sqrt(y_pci1_welch_mat[:, i, i].real),
                 linewidth=1, ls=':',
                 label=r'$y_{\mathrm{'+mosas_order[i]+',pci1}}$',
                rasterized=True)
 #for i in range(6):
-#    axes.loglog(freqs, np.sqrt(y_pci2_welch_mat[:, i, i].real), 
-#                linewidth=1, 
+#    axes.loglog(freqs, np.sqrt(y_pci2_welch_mat[:, i, i].real),
+#                linewidth=1,
 #                label=r'$y_{\mathrm{'+mosas_order[i]+',pci2}}$',
 #               rasterized=True)
 for i in range(6):
-    axes.loglog(freqs, np.sqrt(y_sec_welch_mat[:, i, i].real), 
+    axes.loglog(freqs, np.sqrt(y_sec_welch_mat[:, i, i].real),
                 linewidth=1, ls='--',
                 label=r'$y_{\mathrm{'+mosas_order[i]+',sec}}$',
                 rasterized=True)
 axes.legend(loc='upper center', ncol=4, frameon=False)
-# axes.grid(linewidth=1, which='both', 
-#           color='gray', 
+# axes.grid(linewidth=1, which='both',
+#           color='gray',
 #           linestyle='dotted')
 axes.set_xlabel("Frequency [Hz]")
 axes.set_ylabel(r"$\mathrm{\sqrt{PSD}}$ [$\mathrm{Hz}^{-1/2}$]")
@@ -639,14 +655,14 @@ plt.show()
 
 def filter_single_link_data(self, ydata,n_channels=None):
     '''
-    Compute recovered single-link channel vectors from a set of single-link data. This should yield 
+    Compute recovered single-link channel vectors from a set of single-link data. This should yield
     identical results to appropriately called compute_single_link_from_channels but we first implement
-    separately for testing, since the stencil_compts stuff is new. This one is more low-level and 
+    separately for testing, since the stencil_compts stuff is new. This one is more low-level and
     doesn't assum the stencil is selected.
-    
+
     Parameters
     ----------
-    ydata : ndarray 
+    ydata : ndarray
         The raw single-link data-set to be transformed.
 
     Returns
@@ -710,7 +726,7 @@ def multiple_dot(a_mat, b_mat):
 # %% Estimate sensitivity function
 
 def estimate_sensitivity(pci, data_n, data_gw, n_channels=6, joint=True, single_link=False, welch_kwargs=welch_kwargs):
-    
+
     # PCI transformation vector, size n_channel x p
     #v_pci = pci.v_pci(n_channels)
     # Projection of the data segment t
@@ -733,18 +749,18 @@ def estimate_sensitivity(pci, data_n, data_gw, n_channels=6, joint=True, single_
     print(freqs, e_pci_gw_mat)
     # Orthogonalization
     _, s, vh = np.linalg.svd(e_pci_n_mat)
-    # Apply the orthogonal transformation to the GW signal    
+    # Apply the orthogonal transformation to the GW signal
     e_pci_gw_mat_ortho = multiple_dot(vh, multiple_dot(e_pci_gw_mat, np.swapaxes(vh, 1, 2).conj()))
     # Apply the orthogonal transformation to the noise covariance
     e_pci_n_mat_ortho = multiple_dot(vh, multiple_dot(e_pci_n_mat, np.swapaxes(vh, 1, 2).conj()))
     # Output sensitivity for each variable, size nfreqs x n_channels
     # pci_sens = np.array([np.abs(s[:, j] / e_pci_gw_mat_ortho[:, j, j]) for j in range(n_channels)]).T
     pci_sens = np.array([np.abs(e_pci_n_mat_ortho[:, j, j] / e_pci_gw_mat_ortho[:, j, j]) for j in range(n_channels)]).T
-    
+
     print("Computation completed.")
     if joint:
         pci_sens = 1 / np.sum(1/np.array(pci_sens), axis=1)
-    
+
     return freqs, pci_sens
 
 def process_data(y_noise, y_gw, fs, nhalf, order=1, n_channels=6, pca_y_noise=None, joint=False, pci_kwargs={}, welch_kwargs={}):
@@ -752,21 +768,21 @@ def process_data(y_noise, y_gw, fs, nhalf, order=1, n_channels=6, pca_y_noise=No
     Apply PCI and compute sensitivity all wrapped up together. If pda_y_noise is provided it is used
     only for computing the PCI and y_noise is used only for the sensitivity application
     '''
-    
+
     if pca_y_noise is None: pca_y_noise=y_noise
-        
+
     print('nhalf:',nhalf, 'sens data_size:',len(y_noise),'pca data_size:',len(pca_y_noise))
-    
+
     # Get the length of the time series
     # data_size = y_noise.shape[0]
     # data_noise = Data.from_instrument(instr_data)
 
     print('compute PCI')
     pci=pci_filter.PCIFilter(y_noise, fs, maxcompts=10, nhalf=nhalf,order=order,**pci_kwargs)
-    
+
     result=estimate_sensitivity(pci, y_noise, y_gw, n_channels=n_channels, joint=joint, welch_kwargs=welch_kwargs)
     del(pci)
-    
+
     return result
 
 
@@ -828,7 +844,7 @@ freqs, p_tdi2_gw_mat = compute_welch_matrix(e_tdi2_gw, **welch_kwargs)
 u_tdi, s_tdi, vh_tdi = np.linalg.svd(p_tdi2_n_mat)
 
 # Apply the orthogonal transformation to the GW signal
-p_tdi2_gw_mat_ortho = multiple_dot(vh_tdi, 
+p_tdi2_gw_mat_ortho = multiple_dot(vh_tdi,
 
 multiple_dot(p_tdi2_gw_mat, np.swapaxes(vh_tdi, 1, 2).conj()))
 
@@ -859,7 +875,7 @@ pci_sens_list = [
 #    ["PCI-2 std", process_data(y_full[:ns, :].T, y_gw[0:ns, :].T, kwargs['fs'], nh, order=2, n_channels=6, joint=True, pci_kwargs={'sort_by_rms':False},welch_kwargs=kwargs)],
 #    ["PCI-0 rms", process_data(y_full[:ns, :].T, y_gw[0:ns, :].T, kwargs['fs'], nh, order=0, n_channels=6, joint=True, pci_kwargs={'sort_by_rms':True},welch_kwargs=kwargs)],
 #    ["PCI-1 rms", process_data(y_full[:ns, :].T, y_gw[0:ns, :].T, kwargs['fs'], nh, order=1, n_channels=6, joint=True, pci_kwargs={'sort_by_rms':True},welch_kwargs=kwargs)],
-    ["PCI-2 rms", process_data(y_full[:ns, :].T, y_gw[0:ns, :].T, fs, nh, order=2, n_channels=6, joint=True, pci_kwargs={'sort_by_rms':True},welch_kwargs=welch_kwargs)] 
+    ["PCI-2 rms", process_data(y_full[:ns, :].T, y_gw[0:ns, :].T, fs, nh, order=2, n_channels=6, joint=True, pci_kwargs={'sort_by_rms':True},welch_kwargs=welch_kwargs)]
 ]
 
 
@@ -868,12 +884,12 @@ pci_sens_list = [
 
 plotting.plotconfig(lbsize=18, lgsize=16)
 _, axes = plt.subplots(1, 1, figsize=(8, 6))
-axes.loglog(freqs, np.sqrt(mean_tdi2*ns/fs), 
+axes.loglog(freqs, np.sqrt(mean_tdi2*ns/fs),
             linewidth=1, label=r'TDI (empirical)',
             color='black')
 for j in range(len(pci_sens_list)):
     #print(j)
-    axes.loglog(pci_sens_list[j][1][0], np.sqrt(pci_sens_list[j][1][1]*ns/fs), 
+    axes.loglog(pci_sens_list[j][1][0], np.sqrt(pci_sens_list[j][1][1]*ns/fs),
                 linewidth=1, label=pci_sens_list[j][0], rasterized=True)
 axes.legend(loc='upper left', ncol=2)
 axes.set_xlabel("Frequency [Hz]")
@@ -890,10 +906,10 @@ plt.show()
 
 pci_sens_list = []
 #pci_sens_list += [
-#    ["PCI-"+str(j)+" std", estimate_sensitivity(pca_list[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, welch_kwargs=welch_kwargs)] 
+#    ["PCI-"+str(j)+" std", estimate_sensitivity(pca_list[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, welch_kwargs=welch_kwargs)]
 #     for j in range(3)]
 pci_sens_list += [
-    ["PCI-"+str(j)+" rms", estimate_sensitivity(pca_list_rs[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, welch_kwargs=welch_kwargs)] 
+    ["PCI-"+str(j)+" rms", estimate_sensitivity(pca_list_rs[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, welch_kwargs=welch_kwargs)]
      for j in range(3)]
 
 
@@ -904,12 +920,12 @@ pci_sens_list += [
 
 plotting.plotconfig(lbsize=18, lgsize=16)
 _, axes = plt.subplots(1, 1, figsize=(8, 6))
-axes.loglog(freqs, np.sqrt(mean_tdi2*ns/fs), 
+axes.loglog(freqs, np.sqrt(mean_tdi2*ns/fs),
             linewidth=1, label=r'TDI (empirical)',
             color='black')
 for j in range(len(pci_sens_list)):
     #print(j)
-    axes.loglog(pci_sens_list[j][1][0], np.sqrt(pci_sens_list[j][1][1]*ns/fs), 
+    axes.loglog(pci_sens_list[j][1][0], np.sqrt(pci_sens_list[j][1][1]*ns/fs),
                 linewidth=1, label=pci_sens_list[j][0], rasterized=True)
 axes.legend(loc='upper left', ncol=2)
 axes.set_xlabel("Frequency [Hz]")
@@ -928,10 +944,10 @@ plt.show()
 
 pci_sens_list = []
 #pci_sens_list += [
-#    ["PCI-"+str(j)+" std", estimate_sensitivity(pca_list[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, welch_kwargs=welch_kwargs)] 
+#    ["PCI-"+str(j)+" std", estimate_sensitivity(pca_list[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, welch_kwargs=welch_kwargs)]
 #     for j in range(3)]
 pci_sens_list += [
-    ["PCI-"+str(j)+" filtered", estimate_sensitivity(pca_list_rs[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, single_link=True, welch_kwargs=welch_kwargs)] 
+    ["PCI-"+str(j)+" filtered", estimate_sensitivity(pca_list_rs[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, single_link=True, welch_kwargs=welch_kwargs)]
      for j in range(3)]
 
 
@@ -940,12 +956,12 @@ pci_sens_list += [
 
 plotting.plotconfig(lbsize=18, lgsize=16)
 _, axes = plt.subplots(1, 1, figsize=(8, 6))
-axes.loglog(freqs, np.sqrt(mean_tdi2*ns/fs), 
+axes.loglog(freqs, np.sqrt(mean_tdi2*ns/fs),
             linewidth=1, label=r'TDI (raw)',
             color='black')
 for j in range(len(pci_sens_list)):
     #print(j)
-    axes.loglog(pci_sens_list[j][1][0], np.sqrt(pci_sens_list[j][1][1]*ns/fs), 
+    axes.loglog(pci_sens_list[j][1][0], np.sqrt(pci_sens_list[j][1][1]*ns/fs),
                 linewidth=1, label=pci_sens_list[j][0], rasterized=True)
 axes.legend(loc='upper left', ncol=2)
 axes.set_xlabel("Frequency [Hz]")
@@ -958,7 +974,7 @@ plt.show()
 
 
 # ### PCI of single noise components
-# 
+#
 # #### First we load the single noise data and generate the ys for those
 
 # %%
@@ -974,9 +990,9 @@ y_noise = {}
 for nn in noises:
     noisepath = workdir + dtpath['noise']+ lockstr + nn + '_4Hz.h5'
     print(noisepath)
-    
+
     data_noise = Data.from_instrument(noisepath)
-    
+
     y_noise[nn] = build_data_vector(data_noise, skip=skip, dtype=np.float64)
 
 
@@ -993,7 +1009,7 @@ for nn in noises:
 
 pci_sens_list = []
 #pci_sens_list += [
-#    ["PCI-"+str(j)+" std", estimate_sensitivity(pca_list[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, welch_kwargs=welch_kwargs)] 
+#    ["PCI-"+str(j)+" std", estimate_sensitivity(pca_list[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, welch_kwargs=welch_kwargs)]
 #     for j in range(3)]
 labels = ['test-mass', 'oms', 'tm+oms', 'full']
 
@@ -1004,21 +1020,21 @@ linestyles = ['']
 ## change the labels and the colors
 
 pci_sens_list += [
-    ["PCI-"+str(j)+" filtered", estimate_sensitivity(pca_list_rs[j],y_noise[nn][:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, single_link=True, welch_kwargs=welch_kwargs)] 
+    ["PCI-"+str(j)+" filtered", estimate_sensitivity(pca_list_rs[j],y_noise[nn][:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, single_link=True, welch_kwargs=welch_kwargs)]
      for j in range(2,3) for nn in noises];
-pci_sens_list += [["PCI-"+str(j)+" filtered", estimate_sensitivity(pca_list_rs[j],y_sec[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, single_link=True, welch_kwargs=welch_kwargs)] 
+pci_sens_list += [["PCI-"+str(j)+" filtered", estimate_sensitivity(pca_list_rs[j],y_sec[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, single_link=True, welch_kwargs=welch_kwargs)]
      for j in range(2,3)];
-pci_sens_list += [["PCI-"+str(j)+" filtered", estimate_sensitivity(pca_list_rs[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, single_link=True, welch_kwargs=welch_kwargs)] 
+pci_sens_list += [["PCI-"+str(j)+" filtered", estimate_sensitivity(pca_list_rs[j],y_full[:ns, :].T, y_gw[0:ns, :].T, n_channels=6, joint=True, single_link=True, welch_kwargs=welch_kwargs)]
      for j in range(2,3)];
 
 plotting.plotconfig(lbsize=18, lgsize=16)
 _, axes = plt.subplots(1, 1, figsize=(8, 6))
-axes.loglog(freqs, np.sqrt(mean_tdi2*ns/fs), 
+axes.loglog(freqs, np.sqrt(mean_tdi2*ns/fs),
             linewidth=2, label=r'TDI (raw)',
             color='grey')
 for j in range(len(pci_sens_list)):
     #print(j)
-    axes.loglog(pci_sens_list[j][1][0], np.sqrt(pci_sens_list[j][1][1]*ns/fs), 
+    axes.loglog(pci_sens_list[j][1][0], np.sqrt(pci_sens_list[j][1][1]*ns/fs),
                 linewidth=1.5, label=labels[j], rasterized=True)
 axes.legend(loc='upper left', ncol=2)
 axes.set_xlabel("Frequency [Hz]")
@@ -1031,7 +1047,3 @@ plt.show()
 
 
 # %%
-
-
-
-
