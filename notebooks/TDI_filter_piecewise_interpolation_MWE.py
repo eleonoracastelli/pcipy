@@ -51,6 +51,8 @@ from pyfftw.interfaces.numpy_fft import rfft
 # %% In[2]: 1. Read in data sets
 SKIP = 1000
 
+RANGE_IN_HOURS = 48
+
 DATADIR = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/"
 WORKDIR = DATADIR+"/simulations/"
 
@@ -177,8 +179,6 @@ XYZ_file_noise = TimeData(np.array([x2_noise, y2_noise, z2_noise],
 
 # In[6]: Define data range for this study and set up fourier transforms
 
-RANGE_IN_HOURS = 48
-
 ibuff = 250  # edge buffer for kernels
 
 ns = int(RANGE_IN_HOURS * 3600 * fs)  # less for dev
@@ -199,6 +199,24 @@ wd = np.blackman(ns)
 k2 = np.sum(wd**2)
 
 def do_ft(dataset, fs=fs):
+    """
+    Applies the Fourier Transform to a specific TimeData class dataset.
+
+    Parameters
+    ----------
+    dataset : TimeData  object.
+        Time-series dataset
+    fs : float, optional
+        Sampling frequency. The default is fs.
+
+    Returns
+    -------
+    f : ndarray
+        Selected frequencies.
+    dataset_fft : ndarray
+        FT dataset.
+
+    """
     ns = dataset.n_samples()
     wd = np.blackman(ns)
     f = np.fft.rfftfreq(ns) * fs
@@ -211,8 +229,9 @@ def do_ft(dataset, fs=fs):
 
 print(ytest_n.data.shape)
 
-def do_dec(x):
+def do_dec(x, ibuff = ibuff):
     """
+    Decimates data under analysis.
 
     Parameters
     ----------
@@ -223,7 +242,6 @@ def do_dec(x):
     -------
     TYPE
         DESCRIPTION.
-
     """
 
     return scipy.signal.decimate(x, q=idec)[ibuff:-ibuff]
@@ -234,7 +252,7 @@ tbuff = 0
 tstart = ytest_n.t0 - tbuff
 tend = ytest_n.t0+ytest_n.dt*ytest_n.n_samples() + tbuff
 
-pwFilter = PiecewiseFilter(tstart, tend, 4, TDIFilter,
+pwFilter = PiecewiseFilter(tstart, tend, 8, TDIFilter,
                            measurements_data=data_noise,
                            in_chans=in_chans,
                            method='linear')
@@ -315,14 +333,14 @@ for iset in range(len(XYZset_n)):
 
 
 axes.semilogy(times[ibegin:iend:iev], np.abs(
-    data[ibegin:iend:iev]), c='k--', linewidth=1, label='TDI2-ref:'+'XYZ'[ixyz])
+    data[ibegin:iend:iev]),'k--', linewidth=2, label='TDI2:'+'XYZ'[ixyz])
 
-# data = do_dec(XYZpw.data[ixyz])
-# times = do_dec(XYZpw.get_times())
-# print('time offest check:', np.mean(times-reftimes))
-# print('data shape:', data.shape)
-# axes.semilogy(times[ibegin:iend:iev], np.abs(
-#     data[ibegin:iend:iev]), 'k', linewidth=1, linestyle ='-', label='piecewise:'+'XYZ'[ixyz])
+data = do_dec(XYZpw.data[ixyz])
+times = do_dec(XYZpw.get_times())
+print('time offest check:', np.mean(times-reftimes))
+print('data shape:', data.shape)
+axes.semilogy(times[ibegin:iend:iev], np.abs(
+    data[ibegin:iend:iev]), 'k', linewidth=1, linestyle ='-', label='piecewise:'+'XYZ'[ixyz])
 # axes.semilogy(times[ibegin:iend:iev], 1e-25+np.abs((data-refdata)
 #               [ibegin:iend:iev]), linewidth=1, ls='--', label='pw:'+'XYZ'[ixyz]+' - ref')
 
@@ -364,8 +382,6 @@ refdata = data
 reftimes = times
 print('refshape:', refdata.shape)
 
-axes.semilogy(times[ibegin:iend:iev], np.abs(
-    data[ibegin:iend:iev]), c='k', linewidth=1, label='TDI2-ref:'+'XYZ'[ixyz])
 
 for iset in range(len(XYZset_n)):
     data = do_dec(XYZset_n[iset].data[ixyz])
@@ -375,17 +391,20 @@ for iset in range(len(XYZset_n)):
     # axes.semilogy(times[ibegin:iend:iev], np.abs(
     #     data[ibegin:iend:iev]), linewidth=1, label='n='+str(nks[iset])+':'+'XYZ'[ixyz])
     axes.semilogy(times[ibegin:iend:iev], 1e-25+np.abs((data-refdata)[ibegin:iend:iev]),
-                  linewidth=1, linestyle =':', label='n='+str(nks[iset])+':'+'XYZ'[ixyz]+' - ref')
+                  linewidth=1, linestyle ='-', label='n='+str(nks[iset])+':'+'XYZ'[ixyz]+' - ref')
     # refdata=data
 
-# data = do_dec(XYZpw.data[ixyz])
-# times = do_dec(XYZpw.get_times())
-# print('time offest check:', np.mean(times-reftimes))
-# print('data shape:', data.shape)
+# axes.semilogy(times[ibegin:iend:iev], np.abs(
+#     data[ibegin:iend:iev]), 'k--', linewidth=2, label='TDI2:'+'XYZ'[ixyz])
+
+data = do_dec(XYZpw.data[ixyz])
+times = do_dec(XYZpw.get_times())
+print('time offest check:', np.mean(times-reftimes))
+print('data shape:', data.shape)
 # # axes.semilogy(times[ibegin:iend:iev], np.abs(
 # #     data[ibegin:iend:iev]), linewidth=1, label='pw:'+'XYZ'[ixyz])
-# axes.semilogy(times[ibegin:iend:iev], 1e-25+np.abs((data-refdata)
-#               [ibegin:iend:iev]), 'k', linewidth=1, ls='-', label='pw:'+'XYZ'[ixyz]+' - ref')
+axes.semilogy(times[ibegin:iend:iev], 1e-25+np.abs((data-refdata)
+              [ibegin:iend:iev]), 'k--', linewidth=1, ls='-', label='pw:'+'XYZ'[ixyz]+' - ref')
 
 axes.set_xlabel(r"t")
 axes.set_ylabel(r"smoothed chan")
@@ -445,6 +464,7 @@ iev = 30
 i0 = 0
 
 ixyz = 0
+
 for iset in range(len(XYZset_n)):
     f, data = do_ft(XYZset_n[iset])
     data = data-dataref
