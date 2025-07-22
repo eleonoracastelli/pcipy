@@ -797,12 +797,12 @@ _, axes = plt.subplots(1, 1, figsize=(8, 6))
 for j in range(len(sens_list)):
     #print(j)
     axes.loglog(sens_list[j][1][0], np.sqrt(sens_list[j][1][1]),
-                linewidth=1, label=sens_list[j][0], rasterized=True)
+                linewidth=1, label=r"Numeric", rasterized=True)
 
 for j in range(len(sens_list)):
     #print(j)
     axes.loglog(sens_list_an[j][1][0], np.sqrt(sens_list_an[j][1][1]),
-                linewidth=2, label=sens_list[j][0], rasterized=True, color='tab:orange')
+                linewidth=2, label="Analytic", rasterized=True, color='tab:orange')
 # axes.loglog(f, np.sqrt(S_h), label="backgrounds combined sensitivity")
 # plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo combined sensitivity")
 
@@ -812,5 +812,5 @@ axes.set_ylabel(r"Sensitivity $\sqrt{\frac{P_{n}(f)}{P_{\mathrm{GW}}(f)}}$")
 axes.set_xlim([3e-4, 1.2])
 axes.set_ylim([3e-22, 1e-17])
 axes.grid(linewidth=1, which='both', color='gray', linestyle='dotted')
-axes.set_title("Sensitivity of combined channels")
+axes.set_title("Sensitivity of combined channels - pyTDI data")
 plt.show()
