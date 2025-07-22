@@ -553,7 +553,7 @@ def compute_welch_matrix(ydata, **kwargs):
         array of time series, size n_samples x n_channels
     """
 
-    fy, _ = signal.welch(ydata[:, 0], **kwargs)
+    fy, _ = signal.welch(ydata[:, 0], **kwargs)[0]
     welch_mat = np.zeros((fy.shape[0], ydata.shape[1], ydata.shape[1]), dtype=np.complex128)
 
     for i in range(ydata.shape[1]):
@@ -563,7 +563,7 @@ def compute_welch_matrix(ydata, **kwargs):
             _, welch_mat[:, i, j] = signal.csd(ydata[:, i], ydata[:, j], **kwargs)
             welch_mat[:, j, i] = np.conjugate(welch_mat[:, i, j])
 
-    return fy, welch_mat
+    return fy[1:], welch_mat[1:, : , :]
 
 def compute_welch_matrix_td(y_td, **kwargs):
     """
@@ -590,7 +590,7 @@ def compute_welch_matrix_td(y_td, **kwargs):
             _, welch_mat[:, i, j] = scipy.signal.csd(ydata[:, i], ydata[:, j], **kwargs)
             welch_mat[:, j, i] = np.conjugate(welch_mat[:, i, j])
 
-    return fy, welch_mat
+    return fy[1:], welch_mat[1:, : , :]
 
 def multiple_dot(a_mat, b_mat):
     """
@@ -612,7 +612,7 @@ def multiple_dot(a_mat, b_mat):
 
     return np.einsum("ijk, ikl -> ijl", a_mat, b_mat)
 
-def estimate_sensitivity(filt, data_n, data_gw, joint=True, welch_kwargs=welch_kwargs, strainPSD=1):
+def estimate_sensitivity(filt, data_n, data_gw, orbits, joint=True, welch_kwargs=welch_kwargs, strainPSD=1, analytic = True):
     #Sensitivity is estimated by explicit computation of the ratio of the channel noise and channel simulated GW signal
     #To scale the sensitivity, we need to know the incident strain PSD value (assumed constant here)
     #We understand this as the sum of the plus and cross PSDs for each point source in the simulation
@@ -666,6 +666,17 @@ def estimate_sensitivity(filt, data_n, data_gw, joint=True, welch_kwargs=welch_k
     # tdiresponse
     e_gw_mat = utils.transform_covariance(tdimat, bgresponse_ordered)
 
+    if analytic==True:
+        noise_classes_analytic = []
+        noise_classes_analytic.append(noise.AnalyticOMSNoiseModel(
+            freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, oms_isi_carrier_asds=12e-12))
+        noise_classes_analytic.append(noise.AnalyticTMNoiseModel(
+            freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=2.4e-15))
+
+        # Compute the TDI spectrum from OMS and TM noise
+        cov_tdi_n_comps = [nc.compute_covariances(0.0) for nc in noise_classes_analytic]
+        # Compute the full TDI noise spectrum
+        e_n_mat = sum(cov_tdi_n_comps)
 
     # Orthogonalization
     _, s, vh = np.linalg.svd(e_n_mat)
@@ -691,7 +702,7 @@ def estimate_sensitivity(filt, data_n, data_gw, joint=True, welch_kwargs=welch_k
 # %%
 
 sens_list = []
-sens_list += [["TDIfile", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, joint=True)]]
+sens_list += [["Numeric", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=True, analytic=False)]]
 # ytestn=get_range(tdi2_td,skip-125,skip+125+ns)
 # ytestgw=get_range(tdi2_gw,skip-125,skip+125+ns)
 # sens_list += [["TDIfile[ns]", estimate_sensitivity(None,ytestn,ytestgw,joint=True)]]
@@ -699,8 +710,9 @@ sens_list += [["TDIfile", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw,
 # sens_list += [["linear", estimate_sensitivity(None,XYZlin,XYZlinGW,joint=True)] ]
 
 #TDIfiltset = [ TDIFilter(data_noise,i0=i) for i in i0set ]
-
-
+# %%
+sens_list_an = []
+sens_list_an += [["Analytic", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=True, analytic=True)]]
 
 # %%# %% generate isotropic sky map
 nside = 12
@@ -760,13 +772,13 @@ cov_tdi_n = sum(cov_tdi_n_comps)
 # evaluate sensitivity
 
 S_hx = (np.abs(cov_tdi_n[:,0,0])/np.abs(tdiresponse[:,0,0]))
-S_hy = (np.abs(cov_tdi_n[:,1,1])/np.abs(tdiresponse[:,1,1]))
-S_hz = (np.abs(cov_tdi_n[:,2,2])/np.abs(tdiresponse[:,2,2]))
+# S_hy = (np.abs(cov_tdi_n[:,1,1])/np.abs(tdiresponse[:,1,1]))
+# S_hz = (np.abs(cov_tdi_n[:,2,2])/np.abs(tdiresponse[:,2,2]))
 
 # S_h = 1 / np.sum(1/np.array([(np.abs(cov_tdi_n[:,i,i])/np.abs(tdiresponse[:,i,i])) for i in range(3)]))
-S_h = 1 / np.real(1 / S_hx + 1 / S_hy + 1 / S_hz)
+# S_h = 1 / np.real(1 / S_hx + 1 / S_hy + 1 / S_hz)
 
-S_h = np.array([np.abs(cov_tdi_n[:, j, j] / tdiresponse[:, j, j] * 1) for j in range(3)]).T
+S_h = np.array([np.abs(cov_tdi_n[:, j, j]) / np.abs(tdiresponse[:, j, j] * 1) for j in range(3)]).T
 
 S_h = 1 / np.sum(1/np.array(S_h), axis=1)
 
@@ -784,13 +796,17 @@ _, axes = plt.subplots(1, 1, figsize=(8, 6))
 
 for j in range(len(sens_list)):
     #print(j)
-    axes.loglog(sens_list[j][1][0], np.sqrt(sens_list[j][1][1])*2,
+    axes.loglog(sens_list[j][1][0], np.sqrt(sens_list[j][1][1]),
                 linewidth=1, label=sens_list[j][0], rasterized=True)
 
-axes.loglog(f, np.sqrt(S_h), label="backgrounds sensitivity X")
-# plt.loglog(f, np.sqrt(sensivity_xyz[0]), label="segwo sensitivity")
+for j in range(len(sens_list)):
+    #print(j)
+    axes.loglog(sens_list_an[j][1][0], np.sqrt(sens_list_an[j][1][1]),
+                linewidth=2, label=sens_list[j][0], rasterized=True, color='tab:orange')
+# axes.loglog(f, np.sqrt(S_h), label="backgrounds combined sensitivity")
+# plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo combined sensitivity")
 
-axes.legend(loc='upper left', ncol=2)
+axes.legend()
 axes.set_xlabel("Frequency [Hz]")
 axes.set_ylabel(r"Sensitivity $\sqrt{\frac{P_{n}(f)}{P_{\mathrm{GW}}(f)}}$")
 axes.set_xlim([3e-4, 1.2])
