@@ -81,7 +81,7 @@ print(dtpath)
 
 orbits = WORKDIR + ORBPATH + "-orbits.h5"
 noise_file_base = dtpath['noise'] + datasets['noise']
-gw_file_base = dtpath['point_source'] + datasets['point_source']
+gw_file_base = dtpath['all_sky'] + datasets['all_sky']
 
 # %% In[3]: 2. Generate Basic single-link noise data
 
@@ -636,17 +636,18 @@ def estimate_sensitivity(filt, data_n, data_gw, orbits, joint=True, welch_kwargs
     # Welch spectrum matrix for PCI variables from gw
     # freqs, e_gw_mat = compute_welch_matrix_td(e_gw, **welch_kwargs)
     nside = 12
-
     npix = hp.nside2npix(nside)
     # skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
-    skymap = np.ones(npix) / np.sqrt(2*npix)
+    # skymap = np.ones(npix) / np.sqrt(4 * np.pi * npix)
+    skymap = np.ones(npix) / np.sqrt(2 * npix)
+
     #  Instantiate SGWB class
     sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits, orbit_interp_order=1)
-    t0 = np.ones(1) * (sgwbcls.t0 + 10)  #need an object with a specific length
+    t0 = np.ones(1) * (sgwbcls.t0 + 10)  # need an object with a specific length
     # Now let's do it for all links
     gplus, gcross = sgwbcls.compute_correlations(sgwbcls.LINKS, freqs, t0)
     bgresponse = gplus + gcross
-    #  compute TDI response matrix
+    # compute TDI response matrix
     # Time delay interferometry performs a linear combination of delayed single-link measurements to cancel laser frequency noise. It outputs three channels that contain all the GW information.
 
     # Algebraically, this transformation can be written in the (time-)frequency domain using a matrix operation:
@@ -667,11 +668,16 @@ def estimate_sensitivity(filt, data_n, data_gw, orbits, joint=True, welch_kwargs
     e_gw_mat = utils.transform_covariance(tdimat, bgresponse_ordered)
 
     if analytic==True:
+        # OMS amplitudes from LISA Instrument paper
+        oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)
+        # root sum square of the carrier amplitudes
+        Aoms= np.sqrt(oms_asds[0]**2+oms_asds[2]**2+oms_asds[4]**2)
+        Atm = 2.24e-15
         noise_classes_analytic = []
         noise_classes_analytic.append(noise.AnalyticOMSNoiseModel(
-            freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, oms_isi_carrier_asds=12e-12))
+            f, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, oms_isi_carrier_asds=Aoms))
         noise_classes_analytic.append(noise.AnalyticTMNoiseModel(
-            freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=2.4e-15))
+            f, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=Atm))
 
         # Compute the TDI spectrum from OMS and TM noise
         cov_tdi_n_comps = [nc.compute_covariances(0.0) for nc in noise_classes_analytic]
@@ -715,74 +721,80 @@ sens_list_an = []
 sens_list_an += [["Analytic", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=True, analytic=True)]]
 
 # %%# %% generate isotropic sky map
-nside = 12
-npix = hp.nside2npix(nside)
-# skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
-skymap = np.ones(npix) / np.sqrt(2*npix)
+# nside = 12
+# npix = hp.nside2npix(nside)
+# # skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
+# skymap = np.ones(npix) / np.sqrt(2*npix)
 
-f = sens_list[0][1][0]
-# %% Instantiate SGWB class
-sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits, orbit_interp_order=1)
-t0 = np.ones(1) * (sgwbcls.t0 + 10)  #need an object with a specific length
-# %% Now let's do it for all links
-gplus, gcross = sgwbcls.compute_correlations(sgwbcls.LINKS, f, t0)
-bgresponse = gplus + gcross
-# %% compute TDI response matrix
-# Time delay interferometry performs a linear combination of delayed single-link measurements to cancel laser frequency noise. It outputs three channels that contain all the GW information.
+# f = sens_list[0][1][0]
+# # %% Instantiate SGWB class
+# sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits, orbit_interp_order=1)
+# t0 = np.ones(1) * (sgwbcls.t0 + 10)  #need an object with a specific length
+# # %% Now let's do it for all links
+# gplus, gcross = sgwbcls.compute_correlations(sgwbcls.LINKS, f, t0)
+# bgresponse = gplus + gcross
+# # %% compute TDI response matrix
+# # Time delay interferometry performs a linear combination of delayed single-link measurements to cancel laser frequency noise. It outputs three channels that contain all the GW information.
 
-# Algebraically, this transformation can be written in the (time-)frequency domain using a matrix operation:
-# If you have already computed the single-link responses like above, you can simply compute the TDI transfer function (for X, Y, Z) and then apply it through the equation above:
+# # Algebraically, this transformation can be written in the (time-)frequency domain using a matrix operation:
+# # If you have already computed the single-link responses like above, you can simply compute the TDI transfer function (for X, Y, Z) and then apply it through the equation above:
 
-bgresponse_ordered = bgresponse[..., convert, :]
-bgresponse_ordered = bgresponse_ordered[..., convert]
-
-
-# tdi transfer function at frequencies freqs and time t0
-# this is an array of 3 x 6 matrices (ncombs x nlinks)
-tdimat = sgwbcls.compute_tdi_design_matrix(f, t0, gen = '2.0')
-# compute the tdi response in the frequency domain
-# this is an array of 3 x 3 matrices
-#  Rtdi = Mtdi * Rlinks * Mtdi'
-# (ncombs x ncombs) = (ncombs x nlinks) * (nlinks x nlinks) * (nlinks x ncombs)
-tdiresponse = utils.transform_covariance(tdimat, bgresponse_ordered)
-
-# %% Compute SGWB background PSD in TDI
-
-# Now that we have computed the response matrix of any isotropic SGWB, we can derive the PSD of a SGWB given its strain PSD
-# . For example, let’s assume that the energy density of the background is a power-law with amplitude and index
-# Then the strain PSD at present time is
-# You can compute it as follows:
-
-sh = signal.sgwb_psd(f, spec_index=0.5, freq0=1e-3, omega_gw=1e-14)
-
-# %% Then we can comp TDI covariance from the SGWB by simply multiplying S_h with the TDI response matrix R_tdi. We obtain a 3x3 matrix for each frequency bin, whose entries are the PSDs and the CSDs of the TDI channels .
-
-tdicovariance = tdiresponse * sh[:, np.newaxis, np.newaxis]
-
-noise_classes_analytic = []
-noise_classes_analytic.append(noise.AnalyticOMSNoiseModel(
-    f, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, oms_isi_carrier_asds=12e-12))
-noise_classes_analytic.append(noise.AnalyticTMNoiseModel(
-    f, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=2.4e-15))
-
-# Compute the TDI spectrum from OMS and TM noise
-cov_tdi_n_comps = [nc.compute_covariances(0.0) for nc in noise_classes_analytic]
-# Compute the full TDI noise spectrum
-cov_tdi_n = sum(cov_tdi_n_comps)
-# evaluate sensitivity
-
-S_hx = (np.abs(cov_tdi_n[:,0,0])/np.abs(tdiresponse[:,0,0]))
-# S_hy = (np.abs(cov_tdi_n[:,1,1])/np.abs(tdiresponse[:,1,1]))
-# S_hz = (np.abs(cov_tdi_n[:,2,2])/np.abs(tdiresponse[:,2,2]))
-
-# S_h = 1 / np.sum(1/np.array([(np.abs(cov_tdi_n[:,i,i])/np.abs(tdiresponse[:,i,i])) for i in range(3)]))
-# S_h = 1 / np.real(1 / S_hx + 1 / S_hy + 1 / S_hz)
-
-S_h = np.array([np.abs(cov_tdi_n[:, j, j]) / np.abs(tdiresponse[:, j, j] * 1) for j in range(3)]).T
-
-S_h = 1 / np.sum(1/np.array(S_h), axis=1)
+# bgresponse_ordered = bgresponse[..., convert, :]
+# bgresponse_ordered = bgresponse_ordered[..., convert]
 
 
+# # tdi transfer function at frequencies freqs and time t0
+# # this is an array of 3 x 6 matrices (ncombs x nlinks)
+# tdimat = sgwbcls.compute_tdi_design_matrix(f, t0, gen = '2.0')
+# # compute the tdi response in the frequency domain
+# # this is an array of 3 x 3 matrices
+# #  Rtdi = Mtdi * Rlinks * Mtdi'
+# # (ncombs x ncombs) = (ncombs x nlinks) * (nlinks x nlinks) * (nlinks x ncombs)
+# tdiresponse = utils.transform_covariance(tdimat, bgresponse_ordered)
+
+# # %% Compute SGWB background PSD in TDI
+
+# # Now that we have computed the response matrix of any isotropic SGWB, we can derive the PSD of a SGWB given its strain PSD
+# # . For example, let’s assume that the energy density of the background is a power-law with amplitude and index
+# # Then the strain PSD at present time is
+# # You can compute it as follows:
+
+# sh = signal.sgwb_psd(f, spec_index=0.5, freq0=1e-3, omega_gw=1e-14)
+
+# # %% Then we can comp TDI covariance from the SGWB by simply multiplying S_h with the TDI response matrix R_tdi. We obtain a 3x3 matrix for each frequency bin, whose entries are the PSDs and the CSDs of the TDI channels .
+
+# tdicovariance = tdiresponse * sh[:, np.newaxis, np.newaxis]
+
+# # OMS amplitudes from LISA Instrument paper
+# oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)
+
+# # root sum square of the carrier amplitudes
+# Aoms= np.sqrt(oms_asds[0]**2+oms_asds[2]**2+oms_asds[4]**2)
+
+# Atm = 2.24e-15
+
+# noise_classes_analytic = []
+# noise_classes_analytic.append(noise.AnalyticOMSNoiseModel(
+#     f, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, oms_isi_carrier_asds=Aoms))
+# noise_classes_analytic.append(noise.AnalyticTMNoiseModel(
+#     f, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=Atm))
+
+# # Compute the TDI spectrum from OMS and TM noise
+# cov_tdi_n_comps = [nc.compute_covariances(0.0) for nc in noise_classes_analytic]
+# # Compute the full TDI noise spectrum
+# cov_tdi_n = sum(cov_tdi_n_comps)
+# # evaluate sensitivity
+
+# S_hx = (np.abs(cov_tdi_n[:,0,0])/np.abs(tdiresponse[:,0,0]))
+# # S_hy = (np.abs(cov_tdi_n[:,1,1])/np.abs(tdiresponse[:,1,1]))
+# # S_hz = (np.abs(cov_tdi_n[:,2,2])/np.abs(tdiresponse[:,2,2]))
+
+# # S_h = 1 / np.sum(1/np.array([(np.abs(cov_tdi_n[:,i,i])/np.abs(tdiresponse[:,i,i])) for i in range(3)]))
+# # S_h = 1 / np.real(1 / S_hx + 1 / S_hy + 1 / S_hz)
+
+# S_h = np.array([np.abs(cov_tdi_n[:, j, j]) / np.abs(tdiresponse[:, j, j] * 1) for j in range(3)]).T
+
+# S_h = 1 / np.sum(1/np.array(S_h), axis=1)
 
 # In[ ]:
 
@@ -796,15 +808,17 @@ _, axes = plt.subplots(1, 1, figsize=(8, 6))
 
 for j in range(len(sens_list)):
     #print(j)
-    axes.loglog(sens_list[j][1][0], np.sqrt(sens_list[j][1][1]),
-                linewidth=1, label=r"Numeric", rasterized=True)
+    axes.loglog(sens_list[j][1][0], np.sqrt(np.sqrt(2) * sens_list[j][1][1]),
+                linewidth=1, label=r"Numeric $\times \sqrt{2}$", rasterized=True)
 
 for j in range(len(sens_list)):
     #print(j)
-    axes.loglog(sens_list_an[j][1][0], np.sqrt(sens_list_an[j][1][1]),
-                linewidth=2, label="Analytic", rasterized=True, color='tab:orange')
+    axes.loglog(sens_list_an[j][1][0], np.sqrt( sens_list_an[j][1][1] ),
+                linewidth=2, label=r"Analytic", rasterized=True, color='tab:orange')
 # axes.loglog(f, np.sqrt(S_h), label="backgrounds combined sensitivity")
-# plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo combined sensitivity")
+
+# freqs and sensitivity_xyz are evaluated in the `sensitivity_test.py` script
+plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo combined sensitivity", color='tab:green', ls='--')
 
 axes.legend()
 axes.set_xlabel("Frequency [Hz]")
