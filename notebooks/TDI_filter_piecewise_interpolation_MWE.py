@@ -584,9 +584,7 @@ def compute_welch_matrix_td(y_td, **kwargs):
     welch_mat = np.zeros((fy.shape[0], ydata.shape[1], ydata.shape[1]), dtype=np.complex128)
 
     for i in range(ydata.shape[1]):
-        _, welch_mat[:, i, i] = scipy.signal.welch(ydata[:, i], **kwargs)
-
-        for j in range(i+1, ydata.shape[1]):
+        for j in range(i, ydata.shape[1]):
             _, welch_mat[:, i, j] = scipy.signal.csd(ydata[:, i], ydata[:, j], **kwargs)
             welch_mat[:, j, i] = np.conjugate(welch_mat[:, i, j])
 
@@ -675,17 +673,28 @@ def estimate_sensitivity(filt, data_n, data_gw, orbits, joint=True, welch_kwargs
         Atm = 2.24e-15
         noise_classes_analytic = []
         noise_classes_analytic.append(noise.AnalyticOMSNoiseModel(
-            f, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, oms_isi_carrier_asds=Aoms))
+            freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, oms_isi_carrier_asds=Aoms))
         noise_classes_analytic.append(noise.AnalyticTMNoiseModel(
-            f, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=Atm))
+            freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=Atm))
 
         # Compute the TDI spectrum from OMS and TM noise
         cov_tdi_n_comps = [nc.compute_covariances(0.0) for nc in noise_classes_analytic]
         # Compute the full TDI noise spectrum
+        e_n_mat_num = e_n_mat
         e_n_mat = sum(cov_tdi_n_comps)
 
+        fign, axs = plt.subplots(3,1, sharex = True)
+        for i, t in enumerate(['X', 'Y', 'Z']):
+            axs[i].loglog(freqs, e_n_mat_num[:,i,i], label = 'numeric')
+            axs[i].loglog(freqs, e_n_mat[:,i,i], label = 'analytic')
+            axs[i].set_ylabel(r'TDI {t}'.format(t=t))
+            axs[i].grid()
+            axs[i].set_ylim([1e-48, 1e-35])
+        axs[i].set_xlabel('Freqs')
+
+
     # Orthogonalization
-    _, s, vh = np.linalg.svd(e_n_mat)
+    _, _, vh = np.linalg.svd(e_n_mat)
 
     # Apply the orthogonal transformation to the GW signal
     e_gw_mat_ortho = multiple_dot(vh, multiple_dot(e_gw_mat, np.swapaxes(vh, 1, 2).conj()))
@@ -703,12 +712,12 @@ def estimate_sensitivity(filt, data_n, data_gw, orbits, joint=True, welch_kwargs
         print('joining')
         sens = 1 / np.sum(1/np.array(sens), axis=1)
 
-    return freqs, sens
+    return freqs, sens, vh, e_gw_mat_ortho, e_n_mat_ortho
 
 # %%
 
 sens_list = []
-sens_list += [["Numeric", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=True, analytic=False)]]
+sens_list += ["Numeric", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=True, analytic=False)]
 # ytestn=get_range(tdi2_td,skip-125,skip+125+ns)
 # ytestgw=get_range(tdi2_gw,skip-125,skip+125+ns)
 # sens_list += [["TDIfile[ns]", estimate_sensitivity(None,ytestn,ytestgw,joint=True)]]
@@ -718,9 +727,41 @@ sens_list += [["Numeric", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw,
 #TDIfiltset = [ TDIFilter(data_noise,i0=i) for i in i0set ]
 # %%
 sens_list_an = []
-sens_list_an += [["Analytic", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=True, analytic=True)]]
+sens_list_an += ["Analytic", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=True, analytic=True)]
 
-# %%# %% generate isotropic sky map
+# %%
+fig,axs = plt.subplots(3,1, sharex = True)
+axs[0].set_title('Orthogonalization eigenvalues')
+for i, t in enumerate(['X', 'Y', 'Z']):
+    axs[i].plot(sens_list[1][0], sens_list[1][2][:,i,i], label = 'numeric')
+    axs[i].plot(sens_list[1][0], sens_list_an[1][2][:,i,i], label = 'analytic')
+    axs[i].set_ylabel(r'TDI {t}'.format(t=t))
+    axs[i].grid()
+    # axs[i].set_ylim([1e-48, 1e-35])
+axs[i].set_xlabel('Freqs')
+
+fig, axs = plt.subplots(3,1, sharex = True)
+axs[0].set_title('orthogonalized GW signal')
+for i, t in enumerate(['X', 'Y', 'Z']):
+    axs[i].loglog(sens_list[1][0], sens_list[1][3][:,i,i], label = 'numeric')
+    axs[i].loglog(sens_list[1][0], sens_list_an[1][3][:,i,i], label = 'analytic')
+    axs[i].set_ylabel(r'TDI {t}'.format(t=t))
+    axs[i].grid()
+    # axs[i].set_ylim([1e-48, 1e-35])
+axs[i].set_xlabel('Freqs')
+
+fig, axs = plt.subplots(3,1, sharex = True)
+axs[0].set_title('orthogonalized noise covariance')
+for i, t in enumerate(['X', 'Y', 'Z']):
+    axs[i].loglog(sens_list[1][0], sens_list[1][4][:,i,i], label = 'numeric')
+    axs[i].loglog(sens_list[1][0], sens_list_an[1][4][:,i,i], label = 'analytic')
+    axs[i].set_ylabel(r'TDI {t}'.format(t=t))
+    axs[i].grid()
+    # axs[i].set_ylim([1e-48, 1e-35])
+axs[i].set_xlabel('Freqs')
+
+
+# %%# %% generate isotropic skymap
 # nside = 12
 # npix = hp.nside2npix(nside)
 # # skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
@@ -806,25 +847,23 @@ _, axes = plt.subplots(1, 1, figsize=(8, 6))
             # linewidth=1, label=r'TDI (raw)',
             # color='black')
 
-for j in range(len(sens_list)):
-    #print(j)
-    axes.loglog(sens_list[j][1][0], np.sqrt(np.sqrt(2) * sens_list[j][1][1]),
-                linewidth=1, label=r"Numeric $\times \sqrt{2}$", rasterized=True)
+#print(j)
+axes.loglog(sens_list[1][0], np.sqrt(np.sqrt(2) * sens_list[1][1]),
+            linewidth=1, label=r"Numeric $\times \sqrt{2}$", rasterized=True)
 
-for j in range(len(sens_list)):
-    #print(j)
-    axes.loglog(sens_list_an[j][1][0], np.sqrt( sens_list_an[j][1][1] ),
-                linewidth=2, label=r"Analytic", rasterized=True, color='tab:orange')
+#print(j)
+axes.loglog(sens_list_an[1][0], np.sqrt( sens_list_an[1][1] ),
+            linewidth=2, label=r"Analytic", rasterized=True, color='tab:orange')
 # axes.loglog(f, np.sqrt(S_h), label="backgrounds combined sensitivity")
 
 # freqs and sensitivity_xyz are evaluated in the `sensitivity_test.py` script
-plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo combined sensitivity", color='tab:green', ls='--')
+# plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo combined sensitivity", color='tab:green', ls='--')
 
 axes.legend()
 axes.set_xlabel("Frequency [Hz]")
 axes.set_ylabel(r"Sensitivity $\sqrt{\frac{P_{n}(f)}{P_{\mathrm{GW}}(f)}}$")
-axes.set_xlim([3e-4, 1.2])
-axes.set_ylim([3e-22, 1e-17])
+axes.set_xlim([1e-4, 1.2])
+axes.set_ylim([2e-21, 1e-17])
 axes.grid(linewidth=1, which='both', color='gray', linestyle='dotted')
 axes.set_title("Sensitivity of combined channels - pyTDI data")
 plt.show()
