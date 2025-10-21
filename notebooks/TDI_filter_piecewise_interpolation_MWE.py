@@ -51,7 +51,7 @@ from pyfftw.interfaces.numpy_fft import rfft
 # %% In[2]: 1. Read in data sets
 SKIP = 1000
 
-RANGE_IN_HOURS = 48
+RANGE_IN_HOURS = 72
 
 DATADIR = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/"
 WORKDIR = DATADIR+"/simulations/"
@@ -275,7 +275,7 @@ def timed_filter(data_noise, t, in_chans):
     print(f"Time taken for: {end_time - start_time:.4f} seconds")
     return result
 
-nks = [1, 2, 4, 8, 16, 32] # 3.75 s per iteration
+nks = [1, 2, 4, 8]#, 16, 32] # 3.75 s per iteration
 tks = [PiecewiseFilter.select_kernel_times(ytest_n, nk) for nk in nks]
 filtsets = [[TDIFilter(data_noise, eval_time=t, in_chans=in_chans, method='linear')
              for t in PiecewiseFilter.select_kernel_times(ytest_n, nk)]
@@ -291,6 +291,7 @@ XYZset_n = [PiecewiseFilter.piecewise_linear_apply_filter_set(
     ytest_n, filtsets[i], tks[i]) for i in range(len(nks))]
 for s in XYZset_n:
     print(s.n_samples())
+
 
 # In[16]: View data in decimated in the time domain
 # Comparison with TDI variables
@@ -427,24 +428,25 @@ i0 = 0
 
 ixyz = 0
 
+axes.set_title('Comparison between pyTD and data-driven TDI')
 for iset in range(len(XYZset_n)):
     f, data = do_ft(XYZset_n[iset])
     axes.loglog(f[i0::iev], (1+iset*0)*np.abs(data[ixyz, i0::iev]),
-                linewidth=1, label='n='+str(nks[iset])+':'+'XYZ'[ixyz])
+                linewidth=1, label='data-driven TDI with n='+str(nks[iset])+' kernel evaluations')#':'+'XYZ'[ixyz])
 
-for iy in range(1):
-    f, data = do_ft(y_n)
-    axes.loglog(f[i0::iev], (1+iset*0)*np.abs(data[iy, i0::iev]),
-                linewidth=1, label="single-link-"+str(iy))
+# for iy in range(1):
+#     f, data = do_ft(y_n)
+#     axes.loglog(f[i0::iev], (1+iset*0)*np.abs(data[iy, i0::iev]),
+#                 linewidth=1, label="single-link-"+str(iy))
 
 
 f, data = do_ft(TDItest_n.get_range(iskip, None))
 dataref = data
 axes.loglog(f[i0::iev], np.abs(dataref[ixyz, i0::iev]),
-            'k', linewidth=2, label='TDI2(trim):'+'XYZ'[ixyz])
+            'k', linewidth=2, label='TDI 2.0 via pyTDI')
 
-axes.set_xlabel("f")
-axes.set_ylabel(r"fourier transform")
+axes.set_xlabel("Frequency")
+axes.set_ylabel(r"TDI X (Fourier Transform)")
 plt.legend()#loc='upper left', fontsize=16)
 axes.set_ylim([1e-24, 1e-11])
 axes.set_xlim([.3e-4, 1])
@@ -534,15 +536,6 @@ from pcipy.filter import RestrictedFilter
 
 # %%
 
-nperseg = 200000
-welch_kwargs = {"fs": fs,
-          "window": 'blackman',
-          "nperseg": nperseg,
-          "detrend": 'constant',
-          "return_onesided": True,
-          "scaling": 'density'}
-# welch_kwargs['detrend']=None
-
 def compute_welch_matrix(ydata, **kwargs):
     """
     Compute the welch estimated PSDs and CSDs of a multivariate time series.
@@ -565,7 +558,7 @@ def compute_welch_matrix(ydata, **kwargs):
 
 def compute_welch_matrix_td(y_td, **kwargs):
     """
-    Compute the welch estimated PSDs and CSDs of a multivariate time series.
+    Compute the welch estimated PSDs and CSDs of a multivariate time series fro TimeData Class objects.
 
     Parameters
     ----------
@@ -585,6 +578,7 @@ def compute_welch_matrix_td(y_td, **kwargs):
         for j in range(i, ydata.shape[1]):
             _, welch_mat[:, i, j] = scipy.signal.csd(ydata[:, i], ydata[:, j], **kwargs)
             welch_mat[:, j, i] = np.conjugate(welch_mat[:, i, j])
+            welch_mat[:, i, i] = np.abs(welch_mat[:, i, i])
 
     return fy[1:], welch_mat[1:, : , :]
 
@@ -608,60 +602,101 @@ def multiple_dot(a_mat, b_mat):
 
     return np.einsum("ijk, ikl -> ijl", a_mat, b_mat)
 
-def estimate_sensitivity(filt, data_n, data_gw, orbits, joint=True, welch_kwargs=welch_kwargs, strainPSD=1, analytic = True):
-    #Sensitivity is estimated by explicit computation of the ratio of the channel noise and channel simulated GW signal
-    #To scale the sensitivity, we need to know the incident strain PSD value (assumed constant here)
-    #We understand this as the sum of the plus and cross PSDs for each point source in the simulation
+def estimate_sensitivity(filt, data_n, orbits, e_gw_mat = None, joint=True, welch_kwargs=None, strainPSD=1.0, analytic = True):
+    """
+    Estimate the sensitivity of a given dataset against the response to an isotropic SGWB.
 
+    Sensitivity is estimated by explicit computation of the inverse trace of the ratio of the channel simulated GW signal and the channel noise. To scale the sensitivity, we need to know the incident strain PSD value (assumed constant here).
 
+    Parameters
+    ----------
+    filt : Filter Class.
+        If None, data are treated unfilteree.
+    data_n : TimeData Class.
+        Instrument noise data.
+    orbits : str
+        Path to orbit file.
+    e_gw_mat : GW covariance, optional
+        Precalculated GW response from a StochasticBackgroundResponse object from backgrounds. If None, the GW response is evaluated within the class, slowing down calculation time. The default is None.
+    joint : bool, optional
+        Calculate the joint sensitivity of all channels in the TimeData class. The default is True.
+    welch_kwargs : dict, optional
+        Dictionary of Welch kwargs for the evaluation of the noise CSD matrix. The default is None.
+    strainPSD : float, optional
+        Incident strain PSD value (assumed constant here). The default is 1.
+    analytic : bool, optional
+        Choose between analytic noise covariance matrix, w.r.t. numeric. The default is True.
+
+    Returns
+    -------
+    freqs : ndarray
+        Array of frequencies.
+    sens : ndarray
+        Array of sensitivity values. If joint == False, it's an array with as many columns as channels.
+
+    """
     if filt is not None:
         e_n = filt.apply_filter(data_n,method='convolve')
-        filtGW=RestrictedFilter(filt,input_names=y_namesGW)
-        e_gw = filtGW.apply_filter(data_gw,method='convolve')
-
     else:
         e_n = data_n
-        e_gw = data_gw
+
+    if welch_kwargs is None:
+        nperseg = e_n.n_samples()
+        welch_kwargs = {"fs": fs,
+                  "window": 'blackman',
+                  "nperseg": nperseg,
+                  "detrend": 'constant',
+                  "return_onesided": True,
+                  "scaling": 'density'}
 
     n_channels=e_n.n_channels()
     print(n_channels,'channels')
 
-    # Welch spectrum matrix for PCI variables from noise
+    # Welch spectrum matrix from noise data
     freqs, e_n_mat = compute_welch_matrix_td(e_n, **welch_kwargs)
 
-    # Welch spectrum matrix for PCI variables from gw
-    # freqs, e_gw_mat = compute_welch_matrix_td(e_gw, **welch_kwargs)
-    nside = 12
-    npix = hp.nside2npix(nside)
-    # skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
-    # skymap = np.ones(npix) / np.sqrt(4 * np.pi * npix)
-    skymap = np.ones(npix) / np.sqrt(2 * npix)
+    # GW response to a SGWB background
+    if e_gw_mat is None:
+        nside = 12
+        npix = hp.nside2npix(nside)
+        # skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
+        # skymap = np.ones(npix) / np.sqrt(4 * np.pi * npix)
+        skymap = np.ones(npix) / np.sqrt(2 * npix)
 
-    #  Instantiate SGWB class
-    sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits, orbit_interp_order=1)
-    t0 = np.ones(1) * (sgwbcls.t0 + 10)  # need an object with a specific length
-    # Now let's do it for all links
-    gplus, gcross = sgwbcls.compute_correlations(sgwbcls.LINKS, freqs, t0)
-    bgresponse = gplus + gcross
-    # compute TDI response matrix
-    # Time delay interferometry performs a linear combination of delayed single-link measurements to cancel laser frequency noise. It outputs three channels that contain all the GW information.
+        #  Instantiate SGWB class
+        sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits, orbit_interp_order=1)
+        t0 = np.ones(1) * (sgwbcls.t0 + 10)  # need an object with a specific length
+        # Now let's do it for all links
+        gplus, gcross = sgwbcls.compute_correlations(sgwbcls.LINKS, freqs, t0)
+        bgresponse = gplus + gcross
+        # compute TDI response matrix
+        # Time delay interferometry performs a linear combination of delayed single-link measurements to cancel laser frequency noise. It outputs three channels that contain all the GW information.
 
-    # Algebraically, this transformation can be written in the (time-)frequency domain using a matrix operation:
-    # If you have already computed the single-link responses like above, you can simply compute the TDI transfer function (for X, Y, Z) and then apply it through the equation above:
+        # Algebraically, this transformation can be written in the (time-)frequency domain using a matrix operation:
+        # If you have already computed the single-link responses like above, you can simply compute the TDI transfer function (for X, Y, Z) and then apply it through the equation above:
 
-    bgresponse_ordered = bgresponse[..., convert, :]
-    bgresponse_ordered = bgresponse_ordered[..., convert]
+        bgresponse_ordered = bgresponse[..., convert, :]
+        bgresponse_ordered = bgresponse_ordered[..., convert]
 
+        # tdi transfer function at frequencies freqs and time t0
+        # this is an array of 3 x 6 matrices (ncombs x nlinks)
+        tdimat = sgwbcls.compute_tdi_design_matrix(freqs, t0, gen = '2.0')
+        # compute the tdi response in the frequency domain
+        # this is an array of 3 x 3 matrices
+        #  Rtdi = Mtdi * Rlinks * Mtdi'
+        # (ncombs x ncombs) = (ncombs x nlinks) * (nlinks x nlinks) * (nlinks x ncombs)
+        # tdiresponse
+        e_gw_mat = utils.transform_covariance(tdimat, bgresponse_ordered)
+    else:
+        nside = 12
+        npix = hp.nside2npix(nside)
+        # skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
+        # skymap = np.ones(npix) / np.sqrt(4 * np.pi * npix)
+        skymap = np.ones(npix) / np.sqrt(2 * npix)
 
-    # tdi transfer function at frequencies freqs and time t0
-    # this is an array of 3 x 6 matrices (ncombs x nlinks)
-    tdimat = sgwbcls.compute_tdi_design_matrix(freqs, t0, gen = '2.0')
-    # compute the tdi response in the frequency domain
-    # this is an array of 3 x 3 matrices
-    #  Rtdi = Mtdi * Rlinks * Mtdi'
-    # (ncombs x ncombs) = (ncombs x nlinks) * (nlinks x nlinks) * (nlinks x ncombs)
-    # tdiresponse
-    e_gw_mat = utils.transform_covariance(tdimat, bgresponse_ordered)
+        #  Instantiate SGWB class
+        sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits, orbit_interp_order=1)
+        t0 = np.ones(1) * (sgwbcls.t0 + 10)  # need an object with a specific length
 
     if analytic==True:
         # OMS amplitudes from LISA Instrument paper
@@ -678,111 +713,121 @@ def estimate_sensitivity(filt, data_n, data_gw, orbits, joint=True, welch_kwargs
         # Compute the TDI spectrum from OMS and TM noise
         cov_tdi_n_comps = [nc.compute_covariances(0.0) for nc in noise_classes_analytic]
         # Compute the full TDI noise spectrum
-        e_n_mat_num = e_n_mat
         e_n_mat = sum(cov_tdi_n_comps)
 
-        fign, axs = plt.subplots(3,1, sharex = True)
-        for i, t in enumerate(['X', 'Y', 'Z']):
-            axs[i].loglog(freqs, e_n_mat_num[:,i,i], label = 'numeric')
-            axs[i].loglog(freqs, e_n_mat[:,i,i], label = 'analytic')
-            axs[i].set_ylabel(r'TDI {t}'.format(t=t))
-            axs[i].grid()
-            axs[i].set_ylim([1e-48, 1e-35])
-        axs[i].set_xlabel('Freqs')
-
-    factor=strainPSD
-
     # Output sensitivity for each variable, size nfreqs x n_channels
-    sens = np.array([np.abs(e_n_mat[:, j, j] / e_gw_mat[:, j, j] * factor) for j in range(n_channels)]).T
+    sens = np.array([np.abs(e_n_mat[:, j, j] / e_gw_mat[:, j, j] * strainPSD) for j in range(n_channels)]).T
 
     if joint:
         e_n_mat_inv = np.linalg.inv(e_n_mat)
-
         print('Calculate trace')
-        sens = 1/np.trace(e_gw_mat @ e_n_mat_inv, axis1=1, axis2=2 )
+        sens = 1/np.trace(np.linalg.matmul(e_gw_mat,e_n_mat_inv), axis1=1, axis2=2)
 
-    return freqs, sens, #vh, e_gw_mat_ortho, e_n_mat_ortho
+    return freqs, sens
 
+# %%
+
+EVAL_SGWB = True
+nperseg = 200_000
+
+welch_kwargs = {"fs": fs,
+          "window": 'hann',
+          "nperseg": nperseg,
+          "detrend": 'constant',
+          "return_onesided": True,
+          "scaling": 'density'}
+
+if EVAL_SGWB:
+    freqs, _ = compute_welch_matrix_td(XYZ_file_noise, **welch_kwargs)
+    nside = 12
+    npix = hp.nside2npix(nside)
+    # skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
+    # skymap = np.ones(npix) / np.sqrt(4 * np.pi * npix)
+    skymap = np.ones(npix) / np.sqrt(2 * npix)
+    #  Instantiate SGWB class
+    sgwbcls = StochasticBackgroundResponse(skymap=skymap, orbits=orbits, orbit_interp_order=1)
+    t0 = np.ones(1) * (sgwbcls.t0 + 10)  # need an object with a specific length
+    # Now let's do it for all links
+    gplus, gcross = sgwbcls.compute_correlations(sgwbcls.LINKS, freqs, t0)
+    bgresponse = gplus + gcross
+    # compute TDI response matrix
+    # Time delay interferometry performs a linear combination of delayed single-link measurements to cancel laser frequency noise. It outputs three channels that contain all the GW information.
+
+    # Algebraically, this transformation can be written in the (time-)frequency domain using a matrix operation:
+    # If you have already computed the single-link responses like above, you can simply compute the TDI transfer function (for X, Y, Z) and then apply it through the equation above:
+    bgresponse_ordered = bgresponse[..., convert, :]
+    bgresponse_ordered = bgresponse_ordered[..., convert]
+
+    # tdi transfer function at frequencies freqs and time t0
+    # this is an array of 3 x 6 matrices (ncombs x nlinks)
+    tdimat = sgwbcls.compute_tdi_design_matrix(freqs, t0, gen = '2.0')
+    # compute the tdi response in the frequency domain
+    # this is an array of 3 x 3 matrices
+    #  Rtdi = Mtdi * Rlinks * Mtdi'
+    # (ncombs x ncombs) = (ncombs x nlinks) * (nlinks x nlinks) * (nlinks x ncombs)
+    # tdiresponse
+    e_gw_mat = utils.transform_covariance(tdimat, bgresponse_ordered)
 # %%
 
 sens_list = []
-sens_list += ["Numeric", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=True, analytic=False)]
-# ytestn=get_range(tdi2_td,skip-125,skip+125+ns)
-# ytestgw=get_range(tdi2_gw,skip-125,skip+125+ns)
-# sens_list += [["TDIfile[ns]", estimate_sensitivity(None,ytestn,ytestgw,joint=True)]]
-# sens_list += [[nameset[i], estimate_sensitivity(TDIfiltset[i],ytest_n,ytest_gw,joint=True)] for i in range(2,3)]
-# sens_list += [["linear", estimate_sensitivity(None,XYZlin,XYZlinGW,joint=True)] ]
-
-#TDIfiltset = [ TDIFilter(data_noise,i0=i) for i in i0set ]
+sens_list += ["Numeric",
+              estimate_sensitivity(None, XYZ_file_noise, orbits,
+                                   e_gw_mat = e_gw_mat,
+                                   joint=True,
+                                   welch_kwargs=welch_kwargs,
+                                   analytic=False)]
 # %%
 sens_list_an = []
-sens_list_an += ["Analytic", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=True, analytic=True)]
-
-
-# %%
-
-sens_list_single = []
-sens_list_single += ["Numeric", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=False, analytic=False)]
-
-# %%
-sens_list_an_single = []
-sens_list_an_single += ["Analytic", estimate_sensitivity(None,XYZ_file_noise, XYZ_file_gw, orbits, joint=False, analytic=True)]
+sens_list_an += ["Analytic",
+                 estimate_sensitivity(None,XYZ_file_noise, orbits,
+                                      e_gw_mat = e_gw_mat,
+                                      joint=True,
+                                      welch_kwargs=welch_kwargs,
+                                      analytic=True)]
 
 # In[ ]: Combined Sensitivity
 
 from pcipy import plotting
 plotting.plotconfig(lbsize=18, lgsize=16)
+
 _, axes = plt.subplots(1, 1, figsize=(8, 6))
-# axes.loglog(mean_tdi2_sens[0], np.sqrt(mean_tdi2_sens[1]),
-            # linewidth=1, label=r'TDI (raw)',
-            # color='black')
-
-#print(j)
-axes.loglog(sens_list[1][0], np.sqrt(sens_list[1][1] * np.sqrt(2)),
-            linewidth=1, label=r"Numeric $\times \sqrt{2}$", rasterized=True)
-
-#print(j)
-axes.loglog(sens_list_an[1][0], np.sqrt( sens_list_an[1][1] ),
-            linewidth=2, label=r"Analytic", rasterized=True, color='tab:orange')
-# axes.loglog(f, np.sqrt(S_h), label="backgrounds combined sensitivity")
-
-# freqs and sensitivity_xyz are evaluated in the `sensitivity_test.py` script
-# plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo combined sensitivity", color='tab:green', ls='--')
-
+axes.loglog(sens_list[1][0], np.sqrt(sens_list[1][1] * np.sqrt(1)), linewidth=1, label=r"Semi-analytic", rasterized=True)
+axes.loglog(sens_list_an[1][0], np.sqrt( sens_list_an[1][1] ),   linewidth=2, label=r"Analytic", rasterized=True, color='tab:orange')
 axes.legend()
 axes.set_xlabel("Frequency [Hz]")
-axes.set_ylabel(r"Sensitivity $\sqrt{\frac{P_{n}(f)}{P_{\mathrm{GW}}(f)}}$")
+axes.set_ylabel(r"Sensitivity")
 axes.set_xlim([1e-4, 1.2])
 axes.set_ylim([2e-21, 1e-17])
 axes.grid(linewidth=1, which='both', color='gray', linestyle='dotted')
 axes.set_title("Sensitivity of combined channels - pyTDI data")
-plt.show()
+# axes.set_title("Sensitivity of combined channels - pyTDI data - Welch nperseg = {nperseg}".format(nperseg=nperseg))
 
+# %%
 
+sens_list_single = []
+sens_list_single += ["Numeric",
+                     estimate_sensitivity(None, XYZ_file_noise, orbits,
+                                          e_gw_mat = e_gw_mat,
+                                          joint=False,
+                                          welch_kwargs=welch_kwargs,
+                                          analytic=False)]
+# %%
+sens_list_an_single = []
+sens_list_an_single += ["Analytic",
+                        estimate_sensitivity(None, XYZ_file_noise, orbits,
+                                             e_gw_mat = e_gw_mat,
+                                             joint=False,
+                                             welch_kwargs=welch_kwargs,
+                                             analytic=True)]
 # In[ ]: Single Sensitivity
 
-
 # sens_list_single[1][1][:,0]
-from pcipy import plotting
-plotting.plotconfig(lbsize=18, lgsize=16)
 for i, t in enumerate(['X', 'Y', 'Z']):
     _, axes = plt.subplots(1, 1, figsize=(8, 6))
-    # axes.loglog(mean_tdi2_sens[0], np.sqrt(mean_tdi2_sens[1]),
-                # linewidth=1, label=r'TDI (raw)',
-                # color='black')
-
-    #print(j)
     axes.loglog(sens_list[1][0],  np.sqrt(sens_list_single[1][1][:,i]),
                 linewidth=1, label=r"Numeric TDI {t}".format(t=t), rasterized=True)
-
-    #print(j)
     axes.loglog(sens_list_an[1][0], np.sqrt( sens_list_an_single[1][1][:,i] ),
                 linewidth=2, label=r"Analytic TDI {t}".format(t=t), rasterized=True, color='tab:orange')
-    # axes.loglog(f, np.sqrt(S_h), label="backgrounds combined sensitivity")
-
-    # freqs and sensitivity_xyz are evaluated in the `sensitivity_test.py` script
-    # plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo combined sensitivity", color='tab:green', ls='--')
-
     axes.legend()
     axes.set_xlabel("Frequency [Hz]")
     axes.set_ylabel(r"Sensitivity $\sqrt{\frac{P_{n}(f)}{P_{\mathrm{GW}}(f)}}$")
@@ -790,4 +835,3 @@ for i, t in enumerate(['X', 'Y', 'Z']):
     axes.set_ylim([2e-21, 1e-17])
     axes.grid(linewidth=1, which='both', color='gray', linestyle='dotted')
     axes.set_title("Sensitivity of single channels - pyTDI data")
-    plt.show()
