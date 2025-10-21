@@ -129,29 +129,6 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-s",
-        "--seed",
-        type=int,
-        default = None,
-        help = "Specify simulation seed")
-
-    parser.add_argument(
-        "-orb",
-        "--orbits",
-        default='keplerian',
-        choices=['keplerian','equalarm'],
-        help="Choose orbit type",
-    )
-
-    parser.add_argument(
-        "-l",
-        "--locking",
-        default='N1-12',
-        choices=['six','N1-12'],
-        help="Choose locking configuration",
-    )
-
-    parser.add_argument(
         "-tdi",
         "--tdi",
         default=None,
@@ -180,12 +157,6 @@ if __name__ == "__main__":
         help="Save acombinations of laser noise + some individual noise sources",
     )
 
-    parser.add_argument(
-        "-c",
-        "--combined",
-        action="store_true",
-        help="Save acombinations of laser noise + some individual noise sources",
-    )
 
     # Parse the input.
     args = parser.parse_args()
@@ -197,7 +168,7 @@ if __name__ == "__main__":
     t0 = 2173211130.0 # s  datetime.datetime(2038, 11, 12, 16, 45, 30)
 
     # Data size: 24 hours or 2 days
-    tobs = 3 * 24 * 3600
+    tobs = 14 * 24 * 3600
     n_data = int(tobs * fs)
     logging.info("Data size: " + str(n_data))
     logging.info("Data duration: " + str(tobs/3600) + " hours")
@@ -377,7 +348,7 @@ if __name__ == "__main__":
         # Disable all noises
         instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms',
                                             'ranging', 'backlink', 'clock', 'modulation'])
-        instr.simulate()
+        # instr.simulate()
 
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
 
