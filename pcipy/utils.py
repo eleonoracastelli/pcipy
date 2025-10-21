@@ -36,7 +36,48 @@ Functions:
 
 import numpy as np
 import scipy.special as sp
-from scipy import interpolate
+# from scipy import interpolate
+from backgrounds import signal
+
+def compute_welch_matrix(ydata, **kwargs):
+    """
+    Compute the welch estimated PSDs and CSDs of a multivariate time series.
+
+    Parameters
+    ----------
+    ydata : ndarray
+        array of time series, size n_samples x n_channels
+    """
+
+    fy, _ = signal.welch(ydata[:, 0], **kwargs)[0]
+    welch_mat = np.zeros((fy.shape[0], ydata.shape[1], ydata.shape[1]), dtype=np.complex128)
+
+    for i in range(ydata.shape[1]):
+        for j in range(i, ydata.shape[1]):
+            _, welch_mat[:, i, j] = signal.csd(ydata[:, i], ydata[:, j], **kwargs)
+            welch_mat[:, j, i] = np.conjugate(welch_mat[:, i, j])
+
+    return fy[1:], welch_mat[1:, : , :]
+
+def multiple_dot(a_mat, b_mat):
+    """
+    Perform the matrix multiplication of two list of matrices.
+
+    Parameters
+    ----------
+    a : ndarray
+        series of m x n matrices (array of size p x m x n)
+    b : ndarray
+        series of n x k matrices (array of size p x n x k)
+
+    Returns
+    -------
+    c : ndarray
+        array of size p x m x k containg the dot products of all matrices
+        contained in a and b.
+    """
+
+    return np.einsum("ijk, ikl -> ijl", a_mat, b_mat)
 
 # def estimate_psd(data, dt, Nmax, fmax, axs = None):
 #     '''
