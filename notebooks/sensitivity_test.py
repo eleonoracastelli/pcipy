@@ -27,12 +27,14 @@ import healpy as hp
 import h5py
 # from backgrounds import priors, sampling, psd
 sys.path.append('/Users/ecastel2/Documents/virtual-envs/software-install/backgrounds')
-from backgrounds import utils, loadings, plotting, noise, tdi, analysis, signal
+from backgrounds import utils, noise, tdi, signal
 from backgrounds import StochasticBackgroundResponse
 from backgrounds.tdi import convert
 from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 import matplotlib.pyplot as plt
 from datetime import datetime
+
+import scipy.signal
 
 import segwo
 from lisaconstants import c
@@ -198,8 +200,8 @@ ax.legend()
 dt = 1/4
 fs = 4
 # Observation time
-a_day = 86400
-tobs = 7 * a_day
+# a_day = 86400
+# tobs = 7 * a_day
 # # Choose frequency segments edges
 # f_segments = psd.frequency_grid(100/tobs, 15000/tobs, 1e-5, 2.9e-2)
 # # Choose window function
@@ -221,18 +223,22 @@ tobs = 7 * a_day
 # # Restrict the frequency band
 # finds = fper[inds]
 
+# OMS amplitudes from LISA Instrument paper
+oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)
+
+# root sum square of the carrier amplitudes
+Aoms= np.sqrt(oms_asds[0]**2+oms_asds[2]**2+oms_asds[4]**2)
+
+Atm = 2.24e-15
+
 noise_classes_analytic = []
 noise_classes_analytic.append(noise.AnalyticOMSNoiseModel(
-    freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, oms_isi_carrier_asds=15e-12))
+    freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, oms_isi_carrier_asds=Aoms))
 noise_classes_analytic.append(noise.AnalyticTMNoiseModel(
-    freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=3e-15))
-
-
-
+    freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=Atm))
 
 # noise_classes_analytic = []
 # noise_classes_analytic.append(noise.AnalyticNoiseModel(freqs, t0, orbits, link_psd_func)
-
 
 # Compute the TDI spectrum from OMS and TM noise
 cov_tdi_n_comps = [nc.compute_covariances(0.0) for nc in noise_classes_analytic]
@@ -387,12 +393,19 @@ np.testing.assert_allclose(signal_cov_xyz, shortcut_signal_cov_xyz)
 # The OMS noise is defined in terms of displacement (meters), which we convert
 # to fractional frequency shifts
 displ_2_ffd = 2 * np.pi * freqs / c
-oms = (15e-12) ** 2 * displ_2_ffd**2 * (1 + ((2e-3) / freqs) ** 4)
+# OMS amplitudes from LISA Instrument paper
+oms_asds=(6.35e-12, 1.25e-11, 1.42e-12, 3.38e-12, 3.32e-12, 7.90e-12)
+
+# root sum square of the carrier amplitudes
+Aoms= np.sqrt(oms_asds[0]**2+oms_asds[2]**2+oms_asds[4]**2)
+
+oms = Aoms ** 2 * displ_2_ffd**2 * (1 + ((2e-3) / freqs) ** 4)
 
 # The TM noise is defined in terms of acceleration (m/s^2), which we convert to
 # fractional frequency shifts
 acc_2_ffd = 1 / (2 * np.pi * freqs * c)
-tm = (3e-15) ** 2 * acc_2_ffd**2 * (1 + (0.4e-3 / freqs) ** 2) * (1 + (freqs / 8e-3) ** 4)
+Atm = 2.24e-15
+tm = Atm ** 2 * acc_2_ffd**2 * (1 + (0.4e-3 / freqs) ** 2) * (1 + (freqs / 8e-3) ** 4)
 
 # %%
 
@@ -570,7 +583,7 @@ sensitivity_x = segwo.sensitivity.compute_sensitivity_from_covariances(noise_cov
 
 # %% Plot the optimal sensitivity curve for XYZ
 plt.figure(figsize=(10, 6))
-# plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo sensitivity")
+plt.loglog(freqs, np.sqrt(sensivity_xyz[0]), label="segwo sensitivity")
 plt.loglog(freqs, np.sqrt(sensitivity_x[0]), label="segwo sensitivity X")
 plt.loglog(freqs, S_hx, label="backgrounds sensitivity X")
 plt.xlabel("Frequency [Hz]")
@@ -579,3 +592,96 @@ plt.title("KeplerianOrbits orbit file")
 plt.legend()
 plt.grid()
 plt.show()
+
+# %% load noise data
+
+DATADIR = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/"
+WORKDIR = DATADIR+"/simulations/"
+
+MEASPATH = 'measurements_4Hz.h5'
+TDIPATH = 'tdi2_4Hz.h5'
+ORBPATH = 'keplerian'
+
+substring = [ORBPATH + '_' +
+             s for s in ['locking_N1-12_laser_tm_oms_', 'all_sky_gw_', 'gw_']]
+# substring = ['locking_six_laser_tm_oms', 'all_sky_gw', '2_gw']
+sims = ["noise", "all_sky", "point_source"]
+datasets = dict(zip(sims, substring))
+
+matchfile = {}
+dtpath = {}
+
+for n, d in zip(substring, datasets):
+    timestamp = []
+    matchfile[n] = [f for f in os.listdir(WORKDIR) if n in f]
+    for m in matchfile[n]:
+        # pick latest date
+        timestamp.append(datetime.strptime(m[:11], "%Y-%m-%d_"))
+        # print(n, timestamp[n])
+        dtpath[d] = max(timestamp).strftime("%Y-%m-%d_")
+print(dtpath)
+
+orbits = WORKDIR + ORBPATH + "-orbits.h5"
+noise_file_base = dtpath['noise'] + datasets['noise']
+gw_file_base = dtpath['all_sky'] + datasets['all_sky']
+
+noise_sim_path = WORKDIR + noise_file_base + MEASPATH
+
+# get the central frequency
+with h5py.File(noise_sim_path, 'r') as sim:
+    central_freq = sim.attrs['central_freq']
+    fs = sim.attrs['fs']
+    t0 = sim.attrs['t0']
+    dt = 1/fs
+    n_data = sim.attrs['size']
+# TDI noise from file
+tdipath2 = WORKDIR + noise_file_base + 'noise_' + TDIPATH
+
+tdi2 = h5py.File(tdipath2, 'r')
+x2_noise = tdi2['x'][()] / central_freq
+y2_noise = tdi2['y'][()] / central_freq
+z2_noise = tdi2['z'][()] / central_freq
+tdi2.close()
+
+XYZ_file_noise = np.array([x2_noise, y2_noise, z2_noise],
+                                   dtype=np.float64)
+
+# #GW
+tdi2_gw_file = WORKDIR + gw_file_base + TDIPATH
+
+hdf5 = h5py.File(tdi2_gw_file, 'r')
+x2_gw = hdf5['x'][()] #/ central_freq  (gw simulation already in fractional freq)
+y2_gw = hdf5['y'][()] #/ central_freq
+z2_gw = hdf5['z'][()] #/ central_freq
+hdf5.close()
+
+XYZ_file_gw = np.array([x2_gw,y2_gw,z2_gw],
+dtype=np.float64)
+
+pytdi_trim = 1000
+pytdi_t0 = t0 - pytdi_trim * dt
+pytdi_size = n_data + pytdi_trim
+
+instrument_t0 = pytdi_t0
+instrument_size = pytdi_size
+
+# welch kwargs
+kwargs = {"fs": fs,
+          "window": 'hann',
+          "nperseg": (instrument_size-pytdi_trim)//8,
+          "detrend": 'constant',
+          "return_onesided": True,
+          "scaling": 'density'}
+# evaluate PSDs
+f, xpsd = scipy.signal.welch(x2_noise[pytdi_trim:], **kwargs)
+# f, apsd = scipy.signal.welch(a[pytdi_trim:], **kwargs)
+
+# %%
+fig, ax = plt.subplots(1,1, figsize = (8,5))
+plt.loglog(f, xpsd*1, label = r"noise simulation")
+plt.loglog(freqs, np.abs(cov_tdi_n[:, 0, 0]), label = 'backgrounds noise covariance')
+plt.loglog(freqs, np.abs(noise_cov_xyz[:, :, :1, 0:1].flatten()), ls = '--', label = 'segwo noise covariance')
+plt.legend()
+plt.grid()
+plt.ylim([1e-46, 1e-35])
+plt.xlim([1e-5, 1e0])
