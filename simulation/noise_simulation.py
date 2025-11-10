@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     # To print the logs
     logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.WARNING)
 
     # # For parallelization
     # from mpi4py import MPI
