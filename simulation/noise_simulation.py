@@ -52,7 +52,8 @@ import os
 from datetime import datetime
 import h5py
 import numpy as np
-from lisainstrument import Instrument
+import lisainstrument
+from lisainstrument import Instrument, SchedulerConfigParallel
 from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 from pytdi.michelson import X1, Y1, Z1, X2, Y2, Z2
 from pytdi import Data
@@ -62,7 +63,7 @@ if __name__ == "__main__":
 
     # To print the logs
     logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.WARNING)
 
     # # For parallelization
     # from mpi4py import MPI
@@ -113,6 +114,13 @@ if __name__ == "__main__":
         help = "Specify simulation seed")
 
     parser.add_argument(
+        "-d",
+        "--days",
+        type=int,
+        default = 3,
+        help = "Specify simulation length in days")
+
+    parser.add_argument(
         "-orb",
         "--orbits",
         default='keplerian',
@@ -160,15 +168,19 @@ if __name__ == "__main__":
 
     # Parse the input.
     args = parser.parse_args()
+    # simulator version
+    version = int(lisainstrument.__version__[:1])
+    print("***** Simulator version: {v}".format(v=lisainstrument.__version__))
     # Sampling time
     dt = args.dt
     # Sampling frequency
     fs = 1 / dt
     # t0
     t0 = 2173211130.0 # s  datetime.datetime(2038, 11, 12, 16, 45, 30)
-
+    # number of days
+    n_days = args.days
     # Data size: 24 hours or 2 days
-    tobs = 14 * 24 * 3600
+    tobs = n_days * 24 * 3600
     n_data = int(tobs * fs)
     logging.info("Data size: " + str(n_data))
     logging.info("Data duration: " + str(tobs/3600) + " hours")
@@ -258,9 +270,6 @@ if __name__ == "__main__":
     # Disable all noises
     instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
 
-    instr.simulate()
-    simseed = instr.seed
-
     simseed = instr.seed
 
     print("*************************************************")
@@ -284,11 +293,22 @@ if __name__ == "__main__":
         os.remove(writepath)
     except FileNotFoundError:
         pass
-    instr.write(writepath)
+    if version < 2:
+        instr.write(writepath)
+    else:
+        cfg_parallel = SchedulerConfigParallel(chunk_size=250_000,
+                                               num_chunks=2,
+                                               num_workers=4
+                                               )
+        instr.export_hdf5(path=writepath,
+                 overwrite=True,
+                 cfgscheduler= cfg_parallel
+                 )
+
     # Get the single-link outputs and delays
 
     if args.tdi:
-        data_noise = Data.from_instrument(instr)
+        data_noise = Data.from_instrument(writepath)
         print("*************************************************")
         print("Using TDI {tdi}".format(tdi=args.tdi))
         print("*************************************************")
@@ -320,14 +340,23 @@ if __name__ == "__main__":
     # Generate secondary noises HDF5 file
     # disable laser noise to simulate secondary noises
     instr.disable_all_noises(excluding=['test-mass', 'oms'])
-    instr.simulate()
     # Store secondary noises
     writepath = args.output_path + '/' + dt_string + 'noise_sec_'+str(int(fs))+'Hz.h5'
     try:
         os.remove(writepath)
     except FileNotFoundError:
         pass
-    instr.write(writepath)
+    if version < 2:
+        instr.write(writepath)
+    else:
+        cfg_parallel = SchedulerConfigParallel(chunk_size=250_000,
+                                               num_chunks=2,
+                                               num_workers=4
+                                               )
+        instr.export_hdf5(path=writepath,
+                 overwrite=True,
+                 cfgscheduler= cfg_parallel
+                 )
 
     if args.baseline and (not args.individual and not args.combined):
         print("***** baseline")
@@ -348,7 +377,6 @@ if __name__ == "__main__":
         # Disable all noises
         instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms',
                                             'ranging', 'backlink', 'clock', 'modulation'])
-        # instr.simulate()
 
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
 
@@ -358,11 +386,21 @@ if __name__ == "__main__":
             os.remove(writepath)
         except FileNotFoundError:
             pass
-        instr.write(writepath)
+        if version < 2:
+            instr.write(writepath)
+        else:
+            cfg_parallel = SchedulerConfigParallel(chunk_size=250_000,
+                                                   num_chunks=2,
+                                                   num_workers=4
+                                                   )
+            instr.export_hdf5(path=writepath,
+                     overwrite=True,
+                     cfgscheduler= cfg_parallel
+                     )
 
         # Get the single-link outputs and delays
         if args.tdi:
-            data_noise = Data.from_instrument(instr)
+            data_noise = Data.from_instrument(writepath)
             print("***** tdi {n}".format(n=args.tdi))
 
             if args.tdi == '2':
@@ -394,14 +432,23 @@ if __name__ == "__main__":
         # disable laser noise to simulate secondary noises
         instr.disable_all_noises(excluding=['test-mass', 'oms',
                                             'ranging', 'backlink', 'clock', 'modulation'])
-        instr.simulate()
         # Store secondary noises
         writepath=args.output_path + '/' + dt_string + 'noise_sec_'+str(int(fs))+'Hz.h5'
         try:
             os.remove(writepath)
         except FileNotFoundError:
             pass
-        instr.write(writepath)
+        if version < 2:
+            instr.write(writepath)
+        else:
+            cfg_parallel = SchedulerConfigParallel(chunk_size=250_000,
+                                                   num_chunks=2,
+                                                   num_workers=4
+                                                   )
+            instr.export_hdf5(path=writepath,
+                     overwrite=True,
+                     cfgscheduler= cfg_parallel
+                     )
     if args.baseline:
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
 
@@ -424,14 +471,24 @@ if __name__ == "__main__":
                                 aafilter=('kaiser', 240, args.freq1, args.freq2))
 
             instr.disable_all_noises(excluding=["laser", n])
-            instr.simulate()
+
             writepath=args.output_path + '/' + dt_string + 'noise_combined_laser_'+n+'_'+str(int(fs))+'Hz.h5'
             try:
                 os.remove(writepath)
             except FileNotFoundError:
                 pass
             print("***** write laser + {n}".format(n=n))
-            instr.write(writepath)
+            if version < 2:
+                instr.write(writepath)
+            else:
+                cfg_parallel = SchedulerConfigParallel(chunk_size=250_000,
+                                                       num_chunks=2,
+                                                       num_workers=4
+                                                       )
+                instr.export_hdf5(path=writepath,
+                         overwrite=True,
+                         cfgscheduler= cfg_parallel
+                         )
 
         if args.baseline:
             noises = ['ranging', 'backlink', 'clock', 'modulation']
@@ -450,14 +507,23 @@ if __name__ == "__main__":
                                     moc_time_correlation_asds = moc_time_correlation_asds)
 
                 instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n])
-                instr.simulate()
                 writepath=args.output_path + '/' + dt_string + 'noise_combined_lto_'+n+'_'+str(int(fs))+'Hz.h5'
                 try:
                     os.remove(writepath)
                 except FileNotFoundError:
                     pass
                 print("***** write lto + {n}".format(n=n))
-                instr.write(writepath)
+                if version < 2:
+                    instr.write(writepath)
+                else:
+                    cfg_parallel = SchedulerConfigParallel(chunk_size=250_000,
+                                                           num_chunks=2,
+                                                           num_workers=4
+                                                           )
+                    instr.export_hdf5(path=writepath,
+                             overwrite=True,
+                             cfgscheduler= cfg_parallel
+                             )
 
     if args.individual:
         print("***** Saving individual noise contribution")
@@ -478,7 +544,6 @@ if __name__ == "__main__":
                                 aafilter=('kaiser', 240, args.freq1, args.freq2))
 
             instr.disable_all_noises(excluding=["laser", n])
-            instr.simulate()
 
             writepath=args.output_path + '/' + dt_string + 'noise_individual_'+n+'_'+str(int(fs))+'Hz.h5'
             try:
@@ -487,7 +552,17 @@ if __name__ == "__main__":
                 pass
 
             print("***** write {n}".format(n=n))
-            instr.write(writepath)
+            if version < 2:
+                instr.write(writepath)
+            else:
+                cfg_parallel = SchedulerConfigParallel(chunk_size=250_000,
+                                                       num_chunks=2,
+                                                       num_workers=4
+                                                       )
+                instr.export_hdf5(path=writepath,
+                         overwrite=True,
+                         cfgscheduler= cfg_parallel
+                         )
 
         if args.baseline:
             noises = ['ranging', 'backlink', 'clock', 'modulation']
@@ -508,21 +583,21 @@ if __name__ == "__main__":
                                     ranging_biases= ranging_biases,
                                     moc_time_correlation_asds = moc_time_correlation_asds)
 
-                instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms', n])
-                instr.simulate()
-
-                writepath=args.output_path + '/' + dt_string + 'noise_individual_'+n+'_'+str(int(fs))+'Hz.h5'
-                try:
-                    os.remove(writepath)
-                except FileNotFoundError:
-                    pass
-
                 instr.disable_all_noises(excluding=n)
-                instr.simulate()
                 writepath=args.output_path + '/' + dt_string + 'noise_individual_'+n+'_'+str(int(fs))+'Hz.h5'
                 try:
                     os.remove(writepath)
                 except FileNotFoundError:
                     pass
                 print("***** write {n}".format(n=n))
-                instr.write(writepath)
+                if version < 2:
+                    instr.write(writepath)
+                else:
+                    cfg_parallel = SchedulerConfigParallel(chunk_size=250_000,
+                                                           num_chunks=2,
+                                                           num_workers=4
+                                                           )
+                    instr.export_hdf5(path=writepath,
+                             overwrite=True,
+                             cfgscheduler= cfg_parallel
+                             )
