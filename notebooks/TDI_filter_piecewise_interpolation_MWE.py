@@ -34,6 +34,7 @@ kernels for application across a wider temporal stretch of data.
 import os
 from datetime import datetime
 
+import json
 import h5py
 import numpy as np
 import scipy
@@ -51,7 +52,7 @@ from pyfftw.interfaces.numpy_fft import rfft
 # %% In[2]: 1. Read in data sets
 SKIP = 1000
 
-RANGE_IN_HOURS = 72
+RANGE_IN_HOURS = 24*14
 
 DATADIR = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/"
 WORKDIR = DATADIR+"/simulations/"
@@ -89,16 +90,17 @@ noise_sim_path = WORKDIR + noise_file_base + MEASPATH
 
 # get the central frequency
 with h5py.File(noise_sim_path, 'r') as sim:
-    central_freq = sim.attrs['central_freq']
-    fs = sim.attrs['fs']
+    attributes = json.loads(sim.attrs['metadata_json'])
+    central_freq = attributes['central_freq']
+    fs = attributes['fs']
 
 data_noise = Data.from_instrument(noise_sim_path)
 
-in_chans = ["isi"]
-in_chans = ["isi", "rfi", "tmi"]
+in_chans = ["sci"]
+in_chans = ["sci", "ref", "tmi"]
 # in_chans=["isi","rfi","tmi","isi_sb","rfi_sb"]
 
-in_chansGW = ["isi"]
+in_chansGW = ["sci"]
 
 def make_names(in_chans):
     """
@@ -275,7 +277,10 @@ def timed_filter(data_noise, t, in_chans):
     print(f"Time taken for: {end_time - start_time:.4f} seconds")
     return result
 
-nks = [1, 2, 4, 8]#, 16, 32] # 3.75 s per iteration
+
+optimal_nks = RANGE_IN_HOURS // 6
+
+nks = [1, optimal_nks//8, optimal_nks//4, optimal_nks//2, optimal_nks] # 3.75 s per iteration
 tks = [PiecewiseFilter.select_kernel_times(ytest_n, nk) for nk in nks]
 filtsets = [[TDIFilter(data_noise, eval_time=t, in_chans=in_chans, method='linear')
              for t in PiecewiseFilter.select_kernel_times(ytest_n, nk)]
