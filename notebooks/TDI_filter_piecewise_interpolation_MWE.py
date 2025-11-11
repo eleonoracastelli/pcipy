@@ -34,6 +34,7 @@ kernels for application across a wider temporal stretch of data.
 import os
 from datetime import datetime
 
+import json
 import h5py
 import numpy as np
 import scipy
@@ -89,16 +90,17 @@ noise_sim_path = WORKDIR + noise_file_base + MEASPATH
 
 # get the central frequency
 with h5py.File(noise_sim_path, 'r') as sim:
-    central_freq = sim.attrs['central_freq']
-    fs = sim.attrs['fs']
+    attributes = json.loads(sim.attrs['metadata_json'])
+    central_freq = attributes['central_freq']
+    fs = attributes['fs']
 
 data_noise = Data.from_instrument(noise_sim_path)
 
-in_chans = ["isi"]
-in_chans = ["isi", "rfi", "tmi"]
+in_chans = ["sci"]
+in_chans = ["sci", "ref", "tmi"]
 # in_chans=["isi","rfi","tmi","isi_sb","rfi_sb"]
 
-in_chansGW = ["isi"]
+in_chansGW = ["sci"]
 
 def make_names(in_chans):
     """
