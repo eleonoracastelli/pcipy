@@ -270,8 +270,6 @@ if __name__ == "__main__":
     # Disable all noises
     instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
 
-    # instr.simulate()
-
     simseed = instr.seed
 
     print("*************************************************")
@@ -342,7 +340,6 @@ if __name__ == "__main__":
     # Generate secondary noises HDF5 file
     # disable laser noise to simulate secondary noises
     instr.disable_all_noises(excluding=['test-mass', 'oms'])
-    instr.simulate()
     # Store secondary noises
     writepath = args.output_path + '/' + dt_string + 'noise_sec_'+str(int(fs))+'Hz.h5'
     try:
@@ -380,7 +377,6 @@ if __name__ == "__main__":
         # Disable all noises
         instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms',
                                             'ranging', 'backlink', 'clock', 'modulation'])
-        # instr.simulate()
 
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
 
@@ -404,7 +400,7 @@ if __name__ == "__main__":
 
         # Get the single-link outputs and delays
         if args.tdi:
-            data_noise = Data.from_instrument(instr)
+            data_noise = Data.from_instrument(writepath)
             print("***** tdi {n}".format(n=args.tdi))
 
             if args.tdi == '2':
