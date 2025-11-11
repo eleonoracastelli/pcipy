@@ -81,6 +81,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-d",
+        "--days",
+        type=int,
+        default = 3,
+        help = "Specify simulation length in days")
+
+    parser.add_argument(
         "-tdi",
         "--tdi",
         default=None,
@@ -97,8 +104,10 @@ if __name__ == "__main__":
     # t0
     t0 = 2173211130.0 # s  datetime.datetime(2038, 11, 12, 16, 45, 30)
 
+    # number of days
+    n_days = args.days
     # Data size: 24 hours or 2 days
-    tobs = 3 * 24 * 3600
+    tobs = n_days * 24 * 3600
     n_data = int(tobs * fs)
     logging.info("Data size: " + str(n_data))
     logging.info("Data duration: " + str(tobs/3600) + " hours")
@@ -138,8 +147,7 @@ if __name__ == "__main__":
     # Instantiate GW signal class
     src_class = StochasticPointSource(white_generator(1),  #white_noise_generator_at_1,
                                       orbits=orbits,
-                                      gw_beta=np.pi/2,
-                                      gw_lambda=np.pi/2,
+                                      ra=0, dec=0,
                                       dt = dt,
                                       t0 = instrument_t0,
                                       size=n_data)
