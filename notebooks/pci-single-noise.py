@@ -55,6 +55,7 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy import signal
+import json
 
 from datetime import datetime
 
@@ -65,15 +66,21 @@ from pcipy import plotting, pci_filter, channel_analysis
 
 # %% Working directories and paths to files
 
-workdir = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations/"
-datadir = '/Users/ecastel2/Documents/research/GSFC/simulation-tests/orbits/'
+DATADIR = "/Users/jbaker/Projects/PCI/late-2025-work/pcipy/data/"
+WORKDIR = DATADIR+"/simulations/"
+ORBPATH = 'keplerian'
+#workdir = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations/"
+#datadir = '/Users/ecastel2/Documents/research/GSFC/simulation-tests/orbits/'
+workdir=WORKDIR
+datadir=DATADIR
 
 measpath = '_measurements_4Hz.h5'
 secondpath = '_noise_sec_4Hz.h5'
 
-orbits = datadir+"keplerian-orbits.h5"
+orbits = workdir+ORBPATH+"-orbits.h5"
 
-substring = ['locking_n1_12_laser_tm_oms', 'all_sky_gw', 'point_gw']
+substring = [ORBPATH + '_' +
+             s for s in ['locking_N1-12_laser_tm_oms', 'all_sky_gw', 'point_gw']]
 sims = ["noise", "all_sky", "point_source"]
 datasets = dict(zip(sims, substring))
 
@@ -85,11 +92,24 @@ for n,d in zip(substring,datasets):
     matchfile[n] = [f for f in os.listdir(workdir) if n in f]
     for m in matchfile[n]:
         # pick latest date
-        timestamp.append(datetime.strptime(m[:17], "%Y-%m-%d_%Hh%M_"))
+        #timestamp.append(datetime.strptime(m[:17], "%Y-%m-%d_%Hh%M_"))
+        timestamp.append(datetime.strptime(m[:11], "%Y-%m-%d_"))
         #print(n, timestamp[n])
-        dtpath[d] = max(timestamp).strftime("%Y-%m-%d_%Hh%M_")
+        #dtpath[d] = max(timestamp).strftime("%Y-%m-%d_%Hh%M_")
+        dtpath[d] = max(timestamp).strftime("%Y-%m-%d_")
 
 print(dtpath)
+
+gw_type = None
+if "point_source" in dtpath.keys():
+    gw_type = "point_source"
+elif "all_sky" in dtpath.keys():
+    gw_type = "all_sky"
+else:
+    print("WARNING: No GW data identified, sensitivity analysis will fail.")
+print("Found GW type:",gw_type)
+
+
 
 # %%
 
@@ -129,9 +149,10 @@ print(simpath)
 # load hdf5 file to read data attrs
 sim = h5py.File(simpath, 'r')
 # read attrs
-central_freq = sim.attrs['central_freq']
-dt = sim.attrs['dt']
-n_data = sim.attrs['size']
+attributes = json.loads(sim.attrs['metadata_json'])
+central_freq = attributes['central_freq'] 
+dt = attributes['dt']
+n_data = attributes['size']
 # load data
 data_noise = Data.from_instrument(simpath)
 # set sampling frequency
@@ -791,7 +812,8 @@ def process_data(y_noise, y_gw, fs, nhalf, order=1, n_channels=6, pca_y_noise=No
 # %%
 
 
-gw_path = workdir+dtpath["point_source"]+datasets["point_source"]+measpath
+#gw_path = workdir+dtpath["point_source"]+datasets["point_source"]+measpath
+gw_path = workdir+dtpath[gw_type]+datasets[gw_type]+measpath
 
 data_gw = Data.from_gws(gw_path,orbits)
 
@@ -802,7 +824,7 @@ data_gw = Data.from_gws(gw_path,orbits)
 #measurements = {f'isi_{link}': dset[:,ilink] for ilink, link in enumerate(mosas_order)}
 #hdf5.close()
 
-y_list = [data_gw.measurements[f'isi_{link}'] for link in mosas_order]
+y_list = [data_gw.measurements[f'sci_{link}'] for link in mosas_order]
 y_gw = np.array(y_list, dtype=np.float64).T[skip:, :]
 
 
@@ -821,7 +843,8 @@ x2_noise = tdi2['x'][()] / central_freq
 y2_noise = tdi2['y'][()] / central_freq
 z2_noise = tdi2['z'][()] / central_freq
 
-tdi2_gw_file = workdir+dtpath["point_source"]+datasets["point_source"]+"_tdi2_4Hz.h5"
+#tdi2_gw_file = workdir+dtpath["point_source"]+datasets["point_source"]+"_tdi2_4Hz.h5"
+tdi2_gw_file = workdir+dtpath[gw_type]+datasets[gw_type]+"_tdi2_4Hz.h5"
 
 hdf5 = h5py.File(tdi2_gw_file, 'r')
 x2_gw = hdf5['x'][()]

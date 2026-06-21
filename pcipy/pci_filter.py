@@ -9,14 +9,8 @@ Created on Tue Dec 10 15:40:27 2024
 import numpy as np
 from sklearn.decomposition import PCA
 
-## Working toward a new class for handling the apci processing
-"""
-Some plan ideas:
- Want to shift the basic function of PCIFilter class to be for application downstream rather than for the PCI part itself.  This could be via a parent "Filter" class (which could also have a TDI version).  The filter can be used to get a sencil matrix for any regular grid of physical times. For a basic PCI filter this would need to store just the time-referencing info and a set of stencil components.  It would also need the basic generation functions.
- Most of what we have in the current PCIFilter is extra.  We could extract a little from that into a new base class and let the current one become special for experimentation (or drop it).
- For the moment, we keep building in here, but plan to soon split this up into a number of derived class options, each of which will be concrete about the output channels.
-"""
-class PCIFilter():
+
+class PCIFilter:
     '''
     Class for practical application of automatic pci. 
         
@@ -55,7 +49,10 @@ class PCIFilter():
         In every case the window is trivial np.ones([data lenght])  
 
         '''
-        
+
+        # FIXME DEBUG HACK
+        print("pci():",ydata, fs, nhalf, order, maxcompts, t0, dt,zero_mean,detrend,sort_by_rms,Tscale, ref_t0, ref_dt)
+            
         # Data sample size
         self.nsdata = ydata[0].shape[0]
         
@@ -219,7 +216,7 @@ class PCIFilter():
         '''
         For use with the stencil functions below.  We specify n_channels to fix the stencil components externally as these functions to support a generic interface where the channels are fully pre-specified.
         The argument is to specify the number of channels. Internally this sets up self.stencil_compts
-        which has shape (n_channels, order+1, 6*(1+2*nhalf))
+        which has shape (n_channels, order+1, nc*(1+2*nhalf))
         '''
         self.stencil_n_channels=n_channels
         self.stencil_compts=self.components[-n_channels:].reshape(n_channels,self.order+1,-1)
@@ -254,7 +251,7 @@ class PCIFilter():
         
         v = v_compts[:,0,:]
         tpow=1
-        for i in range(order):
+        for i in range(self.order):
             tpow *= t
             v += tpow*v_compts[:,i+1,:]
             
@@ -277,7 +274,7 @@ class PCIFilter():
 
         Returns
         -------
-        v : ndarray with shape=(nsamp,nchannels,6*(1+2*nhalf))
+        v : ndarray with shape=(nsamp,nchannels,nc*(1+2*nhalf))
             Stencil grid
         '''
 
@@ -329,7 +326,7 @@ class PCIFilter():
 
         stencil_grid=self.generate_stencil_grid(tref_start+nhalf*dtref, dtref, nsamp)
 
-        return multipledot.something
+        return something-like #self.components[-n_channels:].dot(datamatrix.T).astype(np.float64)
 
     
     def apply_for_channels(self,ydata, n_channels=None, zero_mean=False, detrend=False):
@@ -386,10 +383,10 @@ class PCIFilter():
         
         #Undo the X-> H datamatrix stacking:
         
-        if n_channels is None: n_channels=self.maxcompt            
+        if n_channels is None: n_channels=self.maxcompts            
         datamatrix = self.build_data_matrix(ydata,zero_mean=zero_mean,detrend=detrend)
         unstacked=datamatrix.reshape(datamatrix.shape[0],self.order+1,-1)
-        print('unstacked data mtrix shape',unstacked.shape)
+        print('unstacked data matrix shape',unstacked.shape)
         print('comps shape',self.components[-n_channels:].shape)
         orderedcomps=self.components[-n_channels:].reshape(n_channels,self.order+1,-1)
         print('comps reshaped',orderedcomps.shape)
@@ -414,7 +411,7 @@ class PCIFilter():
             Reconstructed single link data channels
         '''
         if n_channels is None: n_channels=self.maxcompts
-        y_transformer=self.components[-n_channels:,:6].T
+        y_transformer=self.components[-n_channels:,:self.nc].T
 
         chans_data = self.apply_for_channels(ydata, n_channels)
         Z=np.dot(y_transformer,chans_data)
@@ -443,7 +440,7 @@ class PCIFilter():
         
         assert len(channels_data)==len(self.stencil_compts), "Stencil length ("+str(len(self.stencil_compts))+") doesn't match received channel count."
                                                                                      
-        y_transformer = self.stencil_compts[:,0,:6].T  #The first six columns should correspont to the T^0, unshifted Y elems
+        y_transformer = self.stencil_compts[:,0,:self.nc].T  #The first six columns should correspont to the T^0, unshifted Y elems
         Z=np.dot(y_transformer,channels_data)
         print('single link shape', Z.shape)
         return Z
@@ -591,3 +588,8 @@ class SplitFilter(PCIFilter):
 #     return cov
 
 
+######################
+
+
+
+        
