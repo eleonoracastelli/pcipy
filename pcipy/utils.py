@@ -36,6 +36,7 @@ Functions:
 
 import numpy as np
 import scipy.special as sp
+import scipy.signal as sg
 # from scipy import interpolate
 from backgrounds import signal
 
@@ -429,7 +430,10 @@ def get_cpsd_1freq(datamat,tmpL,tmpf,fs,win,olap):
     npoints = datamat.shape[1]
 
     # DFT coefficients
-    winpt = win(tmpL) #spectral window
+    if isinstance(win, str):
+        winpt = sg.get_window(win, tmpL)
+    else:
+        winpt = win(tmpL) #spectral window
     p = -2j*np.pi*np.arange(0,tmpL,1)/fs;
     C = np.exp(tmpf*p); #DFT coefficients
 

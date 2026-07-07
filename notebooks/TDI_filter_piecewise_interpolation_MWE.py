@@ -49,6 +49,7 @@ from pcipy.filter import PiecewiseFilter as PiecewiseFilter
 import pyfftw
 from pyfftw.interfaces.numpy_fft import rfft
 
+
 # %% In[2]: 1. Read in data sets
 SKIP = 1000
 
@@ -280,20 +281,31 @@ def timed_filter(data_noise, t, in_chans):
 
 optimal_nks = RANGE_IN_HOURS // 6
 
-nks = [1, optimal_nks//8, optimal_nks//4, optimal_nks//2, optimal_nks] # 3.75 s per iteration
-tks = [PiecewiseFilter.select_kernel_times(ytest_n, nk) for nk in nks]
+nks = [56]#[1, optimal_nks//8, optimal_nks//4, optimal_nks//2, optimal_nks] # 3.75 s per iteration
+# tks = [PiecewiseFilter.select_kernel_times(ytest_n, nk) for nk in nks]
+
+
+nhours = [18, 12, 6]
+nsecs = [3600 * i for i in nhours]
+
+tks = [ PiecewiseFilter.select_kernel_intervals(ytest_n, ns) for ns in nsecs ]
+
+
+# %%
 filtsets = [[TDIFilter(data_noise, eval_time=t, in_chans=in_chans, method='linear')
-             for t in PiecewiseFilter.select_kernel_times(ytest_n, nk)]
-            for nk in nks]
+             for t in PiecewiseFilter.select_kernel_intervals(ytest_n, ns)]
+            for ns in nsecs]
+# %%
+# filtsets2 = [TDIFilter(data_noise, eval_time=t, in_chans=in_chans, method='linear')
+#              for t in tks]
 
 # filtsets = [[timed_filter(data_noise, t, in_chans)
 #              for t in PiecewiseFilter.select_kernel_times(ytest_n, nk)]
 #             for nk in nks]
 
-
 # In[15]: Apply filters for linear interpolation
 XYZset_n = [PiecewiseFilter.piecewise_linear_apply_filter_set(
-    ytest_n, filtsets[i], tks[i]) for i in range(len(nks))]
+    ytest_n, filtsets[i], tks[i]) for i in range(len(nsecs))]
 for s in XYZset_n:
     print(s.n_samples())
 
@@ -331,21 +343,21 @@ for iset in range(len(XYZset_n)):
     print('time offest check:', np.mean(times-reftimes))
     print('data shape:', data.shape)
     axes.semilogy(times[ibegin:iend:iev], np.abs(
-        data[ibegin:iend:iev]), linewidth=1, linestyle ='-', label='n='+str(nks[iset])+':'+'XYZ'[ixyz])
+        data[ibegin:iend:iev]), linewidth=1, linestyle ='-', label=str(nhours[iset])+'hours:'+'XYZ'[ixyz])
     # axes.semilogy(times[ibegin:iend:iev], 1e-25+np.abs((data-refdata)[ibegin:iend:iev]),
-                  # linewidth=1, label='n='+str(nks[iset])+':'+'XYZ'[ixyz]+' - ref')
+                  # linewidth=1, label='n='+str(nsecs[iset])+':'+'XYZ'[ixyz]+' - ref')
     # refdata=data
 
 
 axes.semilogy(times[ibegin:iend:iev], np.abs(
     data[ibegin:iend:iev]),'k--', linewidth=2, label='TDI2:'+'XYZ'[ixyz])
 
-data = do_dec(XYZpw.data[ixyz])
-times = do_dec(XYZpw.get_times())
-print('time offest check:', np.mean(times-reftimes))
-print('data shape:', data.shape)
-axes.semilogy(times[ibegin:iend:iev], np.abs(
-    data[ibegin:iend:iev]), 'k-', linewidth=1, label='piecewise:'+'XYZ'[ixyz])
+# data = do_dec(XYZpw.data[ixyz])
+# times = do_dec(XYZpw.get_times())
+# print('time offest check:', np.mean(times-reftimes))
+# print('data shape:', data.shape)
+# axes.semilogy(times[ibegin:iend:iev], np.abs(
+#     data[ibegin:iend:iev]), 'r-', linewidth=1, label='piecewise:'+'XYZ'[ixyz])
 # axes.semilogy(times[ibegin:iend:iev], 1e-25+np.abs((data-refdata)
 #               [ibegin:iend:iev]), linewidth=1, ls='--', label='pw:'+'XYZ'[ixyz]+' - ref')
 
@@ -394,9 +406,9 @@ for iset in range(len(XYZset_n)):
     print('time offest check:', np.mean(times-reftimes))
     print('data shape:', data.shape)
     # axes.semilogy(times[ibegin:iend:iev], np.abs(
-    #     data[ibegin:iend:iev]), linewidth=1, label='n='+str(nks[iset])+':'+'XYZ'[ixyz])
+    #     data[ibegin:iend:iev]), linewidth=1, label='n='+str(nsecs[iset])+':'+'XYZ'[ixyz])
     axes.semilogy(times[ibegin:iend:iev], 1e-25+np.abs((data-refdata)[ibegin:iend:iev]),
-                  linewidth=1, linestyle ='-', label='n='+str(nks[iset])+':'+'XYZ'[ixyz]+' - ref')
+                  linewidth=1, linestyle ='-', label=str(nhours[iset])+'hours:'+'XYZ'[ixyz]+' - ref')
     # refdata=data
 
 # axes.semilogy(times[ibegin:iend:iev], np.abs(
@@ -437,7 +449,7 @@ axes.set_title('Comparison between pyTD and data-driven TDI')
 for iset in range(len(XYZset_n)):
     f, data = do_ft(XYZset_n[iset])
     axes.loglog(f[i0::iev], (1+iset*0)*np.abs(data[ixyz, i0::iev]),
-                linewidth=1, label='data-driven TDI with n='+str(nks[iset])+' kernel evaluations')#':'+'XYZ'[ixyz])
+                linewidth=1, label='data-driven TDI with kernel evaluations every '+str(nhours[iset])+' h')#':'+'XYZ'[ixyz])
 
 # for iy in range(1):
 #     f, data = do_ft(y_n)
@@ -476,7 +488,7 @@ for iset in range(len(XYZset_n)):
     data = data-dataref
     axes.loglog(f[i0::iev], (1+iset*0)*np.abs(data[ixyz, i0::iev]),
                 ls = '--',
-                linewidth=1, label='n='+str(nks[iset])+':'+'XYZ'[ixyz]+' err')
+                linewidth=1, label='data-driven TDI with kernel evaluations every '+str(nhours[iset])+' h:'+'XYZ'[ixyz]+' err')
 
 
 # f, data = do_ft(TDItest_n.get_range(iskip, None))
@@ -508,7 +520,7 @@ for iset in range(len(XYZset_n)):
     data = data-dataref
     axes.loglog(f[i0::iev], (1+iset*0)*np.abs(data[ixyz, i0::iev])/np.abs(dataref[ixyz, i0::iev]),
                 ls = '-',
-                linewidth=1, label='n='+str(nks[iset])+':'+'XYZ'[ixyz]+' rel err')
+                linewidth=1, label='data-driven TDI with kernel evaluations every '+str(nhours[iset])+' h:'+'XYZ'[ixyz]+' rel err')
 
 axes.loglog(f[i0::iev], np.abs(dataref[ixyz, i0::iev])/np.abs(dataref[ixyz, i0::iev]),
             'k', ls = '-',

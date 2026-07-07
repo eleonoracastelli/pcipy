@@ -16,10 +16,10 @@ from io import open
 
 
 NAME = "PCIpy"
-VERSION = '0.0.1' 
+VERSION = '0.0.1'
 DESCRIPTION = 'Principal Component Interferometry package to process and \
     analyse LISA data.'
-# Get the long description from the README file    
+# Get the long description from the README file
 here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     LONG_DESCRIPTION = f.read()
@@ -27,7 +27,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 # Setting up
 setup(
        # the name must match the folder name 'verysimplemodule'
-        name=NAME, 
+        name=NAME,
         version=VERSION,
         author="Eleonora Castelli, John Baker, Quentin Baghi",
         author_email="<eleonora.castelli@nasa.gov>, <john.g.baker@nasa.gov>, <quentin.baghi@protonmail.com>",
@@ -38,14 +38,14 @@ setup(
         keywords='principal component analysis, gravitational-wave interferometry, \
             LISA',
         # python_requires='>=3.5',
-        install_requires=['numpy', 
-                          'xarray', 
-                          'scipy', 
-                          'sympy', 
-                          'pyfftw', 
-                          'h5py', 
-                          'scikit-learn', 
-                          'lisainstrument>=1.8',
+        install_requires=['numpy',
+                          'xarray',
+                          'scipy',
+                          'sympy',
+                          'pyfftw',
+                          'h5py',
+                          'scikit-learn',
+                          'lisainstrument>=1.9',
                           'lisaorbits',
                           'lisagwresponse',
                           'pytdi'],
