@@ -16,7 +16,7 @@ from io import open
 
 
 NAME = "PCIpy"
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 DESCRIPTION = 'Principal Component Interferometry package to process and \
     analyse LISA data.'
 # Get the long description from the README file
@@ -45,8 +45,8 @@ setup(
                           'pyfftw',
                           'h5py',
                           'scikit-learn',
-                          'lisainstrument>=1.9',
-                          'lisaorbits',
+                          'lisainstrument>=2.3',
+                          'lisaorbits>=3.1',
                           'lisagwresponse',
                           'pytdi'],
         # needs to be installed along with your package. Eg: 'caer'
