@@ -191,11 +191,12 @@ def estimate_sensitivity(filt, data_n, orbits, e_gw_mat = None, joint=True, welc
             freqs, t0, orbits, orbit_interp_order=1, gen="2.0", fs=None, duration=None, tm_isi_carrier_asds=Atm))
 
         # Compute the TDI spectrum from OMS and TM noise
-        cov_tdi_n_comps = [nc.compute_covariances(0.0) for nc in noise_classes_analytic]
+        cov_tdi_n_comps = [nc.compute_covariances(0.0).squeeze() for nc in noise_classes_analytic]
         # Compute the full TDI noise spectrum
         e_n_mat = sum(cov_tdi_n_comps)
 
     # Output sensitivity for each variable, size nfreqs x n_channels
+    #print('shapes ( e_n_mat, e_gw_mat ):',e_n_mat.shape, e_gw_mat.shape)
     sens = np.array([np.abs(e_n_mat[:, j, j] / e_gw_mat[:, j, j] * strainPSD) for j in range(n_channels)]).T
 
     if joint:
