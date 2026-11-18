@@ -75,8 +75,8 @@ class DeducedTDIFilter(LinearFilter):
         ioff,kernel = DeducedTDIFilter.compute_kernel_from_measurements(in_names,measurements_data,i0=i0,nleft=nleft,nright=nright,method=method)
         self.nright = ioff
         self.nleft=len(kernel[0]) - 1 - ioff
-        print('tdi_filter: nleft, nright:',self.nleft,self.nright)
-
+        #print('tdi_filter: nleft, nright:',self.nleft,self.nright)
+        
         # In this case, because the above compute_kernel_from_measurements function takes input
         # data from i0, which is applied to produce output TDI data ranging from i0-nleft to i0+nright,
         # we take the middle point of that range as the time-reference point.  TBD is to modify
@@ -136,7 +136,7 @@ class DeducedTDIFilter(LinearFilter):
 
         ioff, kernel = DeducedTDIFilter.compute_kernel_from_measurements_simple(input_names,measurements,i0=i0,nleft=nleft,nright=nright)
         pastwidth=len(kernel[0])
-        print('pastwidth:',pastwidth)
+        #print('pastwidth:',pastwidth)
         if method=='simple':
             pass
         elif method=='exact':
@@ -291,7 +291,7 @@ class DeducedTDIFilter(LinearFilter):
         kernel = np.zeros((3,pastwidth,nchan_in))
         for ilink in range(nchan_in):
             name=names[ilink]
-            print(name)
+            #print(name)
             for j in range(pastwidth): #loop over points in the kernel
                 measurements_1=copy.deepcopy(measurements_z)
                 #name=f'isi_{link}'

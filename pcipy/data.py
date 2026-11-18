@@ -107,7 +107,7 @@ class TimeData:
     
     def get_range(self,istart,iend=None):
         #extract a subset of a TD (to be added to TD)
-        print(self.data.shape)
+        #print(self.data.shape)
         if iend is None:
             iend=self.n_samples()
         newdata = self.data[:,istart:iend]

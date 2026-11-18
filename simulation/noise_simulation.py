@@ -132,7 +132,7 @@ if __name__ == "__main__":
         "-l",
         "--locking",
         default='N1-12',
-        choices=['six','N1-12'],
+        choices=['six','three','N1-12','N2-12','N3-12','N4-12','N5-12','N6-12'],
         help="Choose locking configuration",
     )
 
@@ -149,6 +149,13 @@ if __name__ == "__main__":
         "--baseline",
         action="store_true",
         help="Implement baseline simulation configuration from LISA-LCST-SGS-RP-006",
+    )
+
+    parser.add_argument(
+        "-j",
+        "--jitter",
+        action="store_true",
+        help="Include longitudinal mosa jitter in the simulation",
     )
 
     parser.add_argument(
@@ -268,8 +275,10 @@ if __name__ == "__main__":
                         moc_time_correlation_asds = moc_time_correlation_asds)
 
     # Disable all noises
-    instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms'])
-
+    excludes=['laser', 'test-mass', 'oms']
+    if args.jitter: excludes.append('longitudinal-jitters')
+    instr.disable_all_noises(excluding=excludes)
+    
     simseed = instr.seed
 
     print("*************************************************")
@@ -284,6 +293,7 @@ if __name__ == "__main__":
     lockstr = '_locking_'+locking+'_'
 
     dt_string = now.strftime("%Y-%m-%d_") + args.orbits  +  lockstr + 'laser_tm_oms_'
+    if args.jitter: dt_string+='jitter_'
 
     writepath = args.output_path + '/' + dt_string + 'measurements_'+str(int(fs))+'Hz.h5'
 
@@ -374,9 +384,12 @@ if __name__ == "__main__":
                                            '3':clock_offsets[2]},
                             ranging_biases=ranging_biases,
                             moc_time_correlation_asds = moc_time_correlation_asds)
-        # Disable all noises
-        instr.disable_all_noises(excluding=['laser', 'test-mass', 'oms',
-                                            'ranging', 'backlink', 'clock', 'modulation'])
+
+        #Noises to keep
+        excludes=['laser', 'test-mass', 'oms', 'ranging', 'backlink', 'clock', 'modulation']
+        
+        # Disable all (other) noises
+        instr.disable_all_noises(excluding=excludes)
 
         dt_string = now.strftime("%Y-%m-%d_") + args.orbits + lockstr + 'baseline_'
 

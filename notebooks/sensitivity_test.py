@@ -20,19 +20,23 @@ limitations under the License.
 File: PSDestimator_test.py
 Purpose: Test sensitivity script using backgrounds vs segwo
 """
+import jax
+jax.config.update("jax_enable_x64", True)  #HACK: Some things are coming up zeros with jax, maybe this helps
 
 import numpy as np
 import os, sys
 import healpy as hp
 import h5py
+import json
 # from backgrounds import priors, sampling, psd
-sys.path.append('/Users/ecastel2/Documents/virtual-envs/software-install/backgrounds')
+#sys.path.append('/Users/ecastel2/Documents/virtual-envs/software-install/backgrounds')
 from backgrounds import utils, noise, tdi, signal
 from backgrounds import StochasticBackgroundResponse
 from backgrounds.tdi import convert
 from lisaorbits import KeplerianOrbits, EqualArmlengthOrbits
 import matplotlib.pyplot as plt
 from datetime import datetime
+from lisaconstants.indexing import LINKS
 
 import scipy.signal
 
@@ -49,10 +53,16 @@ nside = 12
 npix = hp.nside2npix(nside)
 # skymap = np.ones(npix) * np.sqrt(4 * np.pi / (2*npix))
 skymap = np.ones(npix) / np.sqrt(2*npix)
-# %% generate orbit file
-workdir = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations/"
 
-orbits = workdir+"sensitivity-test-orbits.h5"
+DATADIR = "/Users/jbaker/Projects/PCI/late-2025-work/pcipy/data/"
+WORKDIR = DATADIR+"/simulations/"
+
+# %% generate orbit file
+#workdir = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/simulations/"
+workdir = WORKDIR
+
+#orbits = workdir+"sensitivity-test-orbits.h5"
+orbits = workdir+"keplerian-orbits.h5"
 t0 = 2173211130.0 # s  datetime.datetime(2038, 11, 12, 16, 45, 30)
 orbits_dt = 100_000
 orbits_trim = 100
@@ -81,7 +91,10 @@ fmin = -5
 nbins = 5000
 
 freqs = np.logspace(fmin, fnyq, nbins)
-t0 = np.ones(1) * (sgwbcls.t0 + 10)  #need an object with a specific length
+#t0 = np.ones(1) * (sgwbcls.t0 + 10)  #need an object with a specific length
+sgwbcls_t0 = sgwbcls.orbits.t_interp[0]
+print('compare times:',sgwbcls_t0,orbits_t0)
+t0 = np.ones(1) * (sgwbcls_t0 + 10)  #need an object with a specific length; ##FIXME? sgwbcls.t0
 
 # %% To compute the response of the link 12 we can use the following method. It takes a few seconds as integration over the sky is numerial: it sums over all pixels of the sky map.
 # gplus, gcross = sgwbcls.compute_correlations([12], freqs, t0)
@@ -98,7 +111,7 @@ t0 = np.ones(1) * (sgwbcls.t0 + 10)  #need an object with a specific length
 # ax.grid()
 
 # %% Now let's do it for all links
-gplus, gcross = sgwbcls.compute_correlations(sgwbcls.LINKS, freqs, t0)
+gplus, gcross = sgwbcls.compute_correlations(LINKS, freqs, t0)
 
 bgresponse = gplus + gcross
 
@@ -108,7 +121,7 @@ print(bgresponse.shape)
 # %% plot
 # response of each link
 fig, ax = plt.subplots(1,1)
-for i, l in enumerate(sgwbcls.LINKS):
+for i, l in enumerate(LINKS):
     ax.loglog(freqs, np.abs(bgresponse[:, i, i]), label = str(l))
 ax.set_xlabel('Frequencies [Hz]')
 ax.set_ylabel(r'$R_{12}(f)$')
@@ -118,8 +131,8 @@ ax.legend()
 
 # correlations among the responses of 12 with all the other links
 fig, ax = plt.subplots(1,1)
-for i, l in enumerate(sgwbcls.LINKS):
-    ax.loglog(freqs, np.abs(bgresponse[:, 0, i]), label = str([sgwbcls.LINKS[0],l]))
+for i, l in enumerate(LINKS):
+    ax.loglog(freqs, np.abs(bgresponse[:, 0, i]), label = str([LINKS[0],l]))
 ax.set_xlabel('Frequencies [Hz]')
 ax.set_ylabel(r'$R_{12}(f)$')
 ax.set_title('Signal CSD - sky averaged')
@@ -171,6 +184,7 @@ ax.legend()
 # Then the strain PSD at present time is
 # You can compute it as follows:
 
+#HACK: This comes out all zeros unless you hack jax precision to force doubles as at the top of the file
 sh = signal.sgwb_psd(freqs, spec_index=0.5, freq0=1e-3, omega_gw=1e-14)
 
 # %% plot strain
@@ -290,7 +304,7 @@ print(signal_cov_eta.shape)
 # %%
 
 fig, ax = plt.subplots(1,1, figsize=(8,6))
-for i, l in enumerate(sgwbcls.LINKS):
+for i, l in enumerate(LINKS):
     ax.loglog(freqs, np.abs(signal_cov_eta[0, :, i, i]), label = str(l)+' segwo')
     ax.loglog(freqs, np.abs(bgresponse[:, i, i]), ls='--', label=str(l)+'backgrounds')
     print(np.abs(bgresponse[:, i, i])/np.abs(signal_cov_eta[0, :, i, i]))
@@ -301,7 +315,7 @@ ax.legend()
 
 
 fig, ax = plt.subplots(1,1, figsize=(8,6))
-for i, l in enumerate(sgwbcls.LINKS):
+for i, l in enumerate(LINKS):
     ax.loglog(freqs, np.abs(signal_cov_eta[0, :, 0, i]), label = '12, '+str(l)+' segwo')
     ax.loglog(freqs, np.abs(bgresponse[:, 0, i]), ls='--', label='12, '+str(l)+' backgrounds')
 ax.set_xlabel('Frequencies [Hz]')
@@ -311,7 +325,7 @@ ax.legend()
 
 # %% TDI
 # We form the ordered list of input variables, i.e., the eta variables
-eta_list = [f"eta_{mosa}" for mosa in sgwbcls.LINKS]
+eta_list = [f"eta_{mosa}" for mosa in LINKS]
 
 # Then we construct our mixing matrix for X2, Y2, and Z2
 eta2xyz = segwo.cov.construct_mixing_from_pytdi(
@@ -329,7 +343,7 @@ for i, t in enumerate(TDI_LABELS):
     j=0
     ax = axs[j]
     ax.set_title(r'{t} Mixing matrix to each link'.format(t=t))
-    for j, l in enumerate(sgwbcls.LINKS):
+    for j, l in enumerate(LINKS):
         ax = axs[j]
         ax.loglog(freqs, np.abs(eta2xyz[0, :, i, j]), label = str(t)+'-'+str(l)+' segwo')
         ax.loglog(freqs, np.abs(tdimat[:, i, j]), ls='--', label=str(t)+'-'+str(l)+' backgrounds')
@@ -459,15 +473,15 @@ ETA_COMBS[21] = ETA_COMBS[23].reflected(2)
 ETA_COMBS[32] = ETA_COMBS[31].reflected(3)
 
 # %% Define list of noise labels (our input variables)
-noise_list = [f"N_oms_{mosa}" for mosa in sgwbcls.LINKS] + [
-    f"N_tm_{mosa}" for mosa in sgwbcls.LINKS
+noise_list = [f"N_oms_{mosa}" for mosa in LINKS] + [
+    f"N_tm_{mosa}" for mosa in LINKS
 ]
 
 # Construct the mixing matrix for the noise covariance
 noise2eta = segwo.cov.construct_mixing_from_pytdi(
     freqs,
     measurements=noise_list,
-    tdi_combinations=[ETA_COMBS[mosa] for mosa in sgwbcls.LINKS],
+    tdi_combinations=[ETA_COMBS[mosa] for mosa in LINKS],
     ltts=ltts,
 )
 
@@ -538,7 +552,7 @@ np.testing.assert_allclose(noise_cov_xyz_composed, noise_cov_xyz_composed2)
 # Define a dictionary containing the TDI combinations mapping the noises into
 # the eta variables, making sure that the keys map the measurement labels used
 # in `X2_ETA`, `Y2_ETA`, and `Z2_ETA` (to allow composing them)
-ETA_COMBS_SET = {f"eta_{mosa}": ETA_COMBS[mosa] for mosa in sgwbcls.LINKS}
+ETA_COMBS_SET = {f"eta_{mosa}": ETA_COMBS[mosa] for mosa in LINKS}
 
 # Define TDI combinations directly mapping noises into XYZ using composition
 X_composed = (X2_ETA @ ETA_COMBS_SET).simplified()
@@ -595,9 +609,6 @@ plt.show()
 
 # %% load noise data
 
-DATADIR = "/Users/ecastel2/Documents/research/GSFC/pci-inrep/"
-WORKDIR = DATADIR+"/simulations/"
-
 MEASPATH = 'measurements_4Hz.h5'
 TDIPATH = 'tdi2_4Hz.h5'
 ORBPATH = 'keplerian'
@@ -629,11 +640,12 @@ noise_sim_path = WORKDIR + noise_file_base + MEASPATH
 
 # get the central frequency
 with h5py.File(noise_sim_path, 'r') as sim:
-    central_freq = sim.attrs['central_freq']
-    fs = sim.attrs['fs']
-    t0 = sim.attrs['t0']
+    attrs = json.loads(sim.attrs['metadata_json'])
+    central_freq = attrs['central_freq']
+    fs = attrs['fs']
+    t0 = attrs['t0']
     dt = 1/fs
-    n_data = sim.attrs['size']
+    n_data = attrs['size']
 # TDI noise from file
 tdipath2 = WORKDIR + noise_file_base + 'noise_' + TDIPATH
 

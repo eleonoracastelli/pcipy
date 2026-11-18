@@ -110,8 +110,8 @@ def stationarity_plots(channel_sets, title='',ndens=1000,split_orders=False,ncha
     plotting.plotconfig(lbsize=20, lgsize=16, fsize=18, 
                     ticklabelsize=20, style='publication',
                     fontfamily = 'STIXGeneral')
-    fig1, axs = plt.subplots(ncols=len(sets),squeeze=False,sharey=True)
-    axs=axs[0]
+    fig1, axs = plt.subplots(nrows=len(sets),squeeze=False,sharey=True,figsize=(10,9))
+    axs=axs[:,0]
     for i,x in enumerate(sets):
         print("i=",i)
         for ich in range(nchan):
@@ -142,7 +142,7 @@ def pci_temporal_variance_corr_plots(filter_obj, ydata, title='',ndens=1000,ncha
     sets=[np.array(xf.apply_for_channels(ydata, n_channels=nchan,zero_mean=zero_mean,detrend=detrend)) for xf in filters]
     temporal_variance_corr_plots(sets, title='',ndens=ndens,nchan=nchan)
 
-def temporal_variance_corr_plots(channel_sets, title='',ndens=1000,nchan=None):
+def temporal_variance_corr_plots(channel_sets, title='',ndens=1000,nchan=None,legend_args={},ymargin=None):
     sets=channel_sets
     if not isinstance(sets,list):
         sets=[sets]
@@ -190,11 +190,12 @@ def temporal_variance_corr_plots(channel_sets, title='',ndens=1000,nchan=None):
             #print('stdevs shape',stdevs.shape,'ev',ev)
             #print(stdevs[j,::ev].shape)
             ax.semilogy(stdevs[j,::ev], marker='.',linewidth=1, label=r'$\mathrm{ch}$[' + str(j+1) + ']')
-        ax.legend(loc='upper left', ncol=2)
+        ax.legend(loc='lower left', ncol=2,**legend_args)
         ax.grid(linewidth=1, which='both', color='gray', linestyle='dotted')
         ax.set_xlabel("sample")
         ax.set_ylabel(r"stdev")
-        ax.set_title(title)
+        if ymargin is not None: ax.margins(y=ymargin)
+        ax.set_title(title[i])
         #plt.show()
         for k in range(nplot-1):                    
             #kk=nchan-1-k                
@@ -207,11 +208,12 @@ def temporal_variance_corr_plots(channel_sets, title='',ndens=1000,nchan=None):
                 #print((binned[jj]*binned[kk])[:,1])
                 #print(covar.shape)
                 ax.plot((covar/stdevs[j]/stdevs[k])[::ev], marker='.',linewidth=1, label=r'$\mathrm{ch}$[' + str(k+1)+','+str(j+1)+ ']')
-            ax.legend(loc='upper left', ncol=2)
+            ax.legend(loc='lower left', ncol=2,**legend_args)
             ax.grid(linewidth=1, which='both', color='gray', linestyle='dotted')
             ax.set_xlabel("sample")
-            ax.set_ylabel(r"stdev")
+            ax.set_ylabel(r"corr")
+            if ymargin is not None: ax.margins(y=ymargin)
             #axes.set_xlim([1e-3, 1])
             # axes.set_ylim([1e-21, 1e-16])
-            ax.set_title(title)
+            ax.set_title(title[i])
 

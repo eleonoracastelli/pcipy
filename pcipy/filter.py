@@ -9,6 +9,7 @@ Created on Jan 16 20:00:05 UTC 2025
 import numpy as np
 from scipy.signal import convolve
 from .data import TimeData
+import copy
 
 
 class LinearFilter:
@@ -153,7 +154,100 @@ class LinearFilter:
         if input_data.t0 is not None and self.dt is not None: t0=input_data.t0+self.nleft*self.dt
         return TimeData(data, dt=self.dt, t0=t0, names=self.output_names)
 
+    def restrict(self, input_names=None,output_names=None):
+        '''
+        Return a restricted version of this filter applying only a subset of input or output channels.
 
+        At least the base implementation constructs a "RestrictedFilter" object.
+        '''
+        return RestrictedFilter(self, input_names=input_names, output_names=output_names)
+
+    def compute_filter_transfer_func(self,freqs):
+        '''
+        Compute the transfer function for a filter specified kernel.
+
+        The transfer function is needed in several contexts, so we provide it with the basic
+        class functionality.  For the base class, this is treated as not being dependent on time.
+        In general though, the kernel will be time dependent.  A time-dependent version
+        of this is likely needed for more general implementations.
+
+        Args:
+           freq: value of array of frequency values at which the transfer function should be evaluated
+        Returns:
+           array of shape: (Nf, Nout, Nin) with the transfer function matrix for each freq.
+           
+        Explanation:
+        
+        For the basic logic of the calculcation, consider a 1_D filter 
+
+        $ x^i = \sum_{j=0}^{m-1} K_j y^{i+j} $
+
+        Then, neglecting the normalizations, the DFT is
+
+        $ X^k = \sum_i Z^{ki} x^i $
+
+        where $Z=exp(i 2 \pi / N )$.
+
+        We want to know the covariance of the result:
+
+        $ C_{kk'}= E\left[{X^k}^*X^{k'}\right] = \sum_{ii'}\sum_{jj'}Z^{-ki}Z^{k'i'}K_jK_{j'} E\left[y^{i+j}y^{i'+j'}\right] $
+
+        The expecation value on the right is now just a autocorrelation of the input series. For stuationary colored noise,
+        this autocorrelation depends only on the lag thus, we can write this as
+
+        $ R_{|i+j-i'-j'|} = E\left[y^{i+j}y^{i'+j'}\right] $
+
+        which is related to the power spectral density by
+
+        $ S_k = \sum_i Z^{ki} R_i $
+
+        Then, we have
+
+        $ C_{kk'} = \sum_{ii'}\sum_{jj'}Z^{-ki}Z{k'i'}K_jK_{j'} Z^{k(i+j-i'-j')} \left(Z^{-k(i+j-i'-j')}R_{|i+j-i'-j'|}\right) $
+
+        $ \qquad        = \sum_{i'}\sum_{jj'}Z^{(-k+k')i'}K_jK_{j'} Z^{k(+j-j')}\left(\sum_{i} Z^{k'(i+j-i'-j')}R_{|i+j-i'-j'|} \right)$
+
+        A change of variables identifies the part in parenthesis as $S_k$. Then then we can integrate over $i'$ to get a delta function.
+
+        $ C_{kk'} = \sum_{jj'}\delta{kk'}K_jK_{j'} Z^{k(+j-j')}S_{k'} $
+        $         = T_k S_k \delta_{k'k} $
+
+        We see the independence of different frequency component expected for stationary noise. In the second line we define the power transfer
+        function, which we can read off as
+
+        $ T_k = \left|W_k\right|^2$
+
+        where the channel transfer function is
+
+        $ W_k = \sum_j K_j Z^{jk} $
+
+        The generalization of this for multi-channel filtering is:
+
+        $ x_\alpha^i = \sum_{j=0}^{m-1} K^{\alpha\beta}_j y_\beta^{i+j} $
+
+        $ T^{\alpha\alpha'\beta\beta'}_k = {W^{\alpha\beta}_k}^*{W^{\alpha'\beta'}_k}$
+
+        $ W^{\alpha\beta}_k = \sum_j K^{\alpha\beta}_j Z^{jk} $
+
+
+        Note that we expect the kernel to have shape (Nout,Ndel,Nin), where Nout is the number of output streams from the filter,
+        Nin is the number of input streams, and Ndel is the number of delays.
+
+        '''
+
+        Nout,Ndel,Nin=self.kernel_compts.shape
+
+        fdt=freqs*self.dt
+        Zk=np.exp(2j*np.pi*fdt) #The sign is conventional here. Should be checked in context.
+
+        Wk=np.multiply.outer(np.ones_like(fdt,dtype=complex),np.zeros((Nout,Nin)))
+        Zkj=np.ones_like(fdt,dtype=complex)
+        for j in range(Ndel):
+            Wk+=np.multiply.outer(Zkj,self.kernel_compts[:,j,:])
+            Zkj*=Zk
+
+        return Wk
+    
 class PiecewiseFilter(LinearFilter):
     '''
     This class builds a time-dependent filter from a set of subfilter kernels
@@ -188,7 +282,12 @@ class PiecewiseFilter(LinearFilter):
         self.n_input_channels=self.subfilters[0].n_input_channels
         self.input_names=self.subfilters[0].input_names
         self.n_output_channels=self.subfilters[0].n_output_channels
-        # kernel_compts is not clearly meaningful
+        self.output_names=self.subfilters[0].output_names ##FIXME: Seems like we need this but it wasn't there
+        # kernel_compts is not ideally defined here. It would be better to allow specification
+        # specific time at which the kernel should be evaluated.  For approximate purposes and/or
+        # moderate durations, eg sensitivity curve GW response, it can be useful to have a simple
+        # representative kernel. For this we provide the closest to central version of the kernel
+        self.kernel_compts=self.subfilters[nkern//2].kernel_compts
         self.constant_kernel=False
         self.dt=self.subfilters[0].dt
 
@@ -316,17 +415,17 @@ class PiecewiseFilter(LinearFilter):
         # 3. Next we need to split the output time domain into a set of subdomains with an assigned pair of nearest filters
         # The subdomains are bounded by the points of nearest kernel times
         kernel_time_indices=np.array([int(x) for x in ((kernel_times-output_t0)/dt+0.5)])
-
-        print('kti',kernel_times,kernel_time_indices)
+        
+        #print('kti',kernel_times,kernel_time_indices)
         select_bounds=np.arange(1,len(kernel_times)-1,dtype=int) #No bound associated with outermost filters since we need filter pairs
         #enforce that internal bounds should be strictly internal
-        print('sel bounds',select_bounds)
-        if len(select_bounds>0):
-            print('ktis',kernel_time_indices[select_bounds])
+        #print('sel bounds',select_bounds)
+        if len(select_bounds>0): 
+            #print('ktis',kernel_time_indices[select_bounds])
             select_bounds=select_bounds[kernel_time_indices[select_bounds]>0]
-        print('sel bounds',select_bounds)
+        #print('sel bounds',select_bounds)
         if len(select_bounds>0): select_bounds=select_bounds[kernel_time_indices[select_bounds]<output_n-1]
-        print('sel bounds',select_bounds)
+        #print('sel bounds',select_bounds)
         istarts=np.concatenate(([0],[kernel_time_indices[i] for i in select_bounds])).astype(int)
         iends=np.concatenate(([kernel_time_indices[i] for i in select_bounds],[output_n])).astype(int)
         k0=0
@@ -336,7 +435,8 @@ class PiecewiseFilter(LinearFilter):
         else:
             right_kernel_inds=left_kernel_inds+1
         nsegs=len(istarts)
-        print('n,starts,ends,kleft,kright',nsegs, istarts, iends, left_kernel_inds, right_kernel_inds)
+        #print('n,starts,ends,kleft,kright',nsegs, istarts, iends, left_kernel_inds, right_kernel_inds)
+    
 
         # 4. Now do apply the filter pairs and linearly interpolate to get the output for each subdomain segment
         #We begin by initiating the left filter version of data
@@ -363,12 +463,12 @@ class PiecewiseFilter(LinearFilter):
             # B. perform linear interpolation on this subdomian
             seg_times = output_times[istart:iend]
             eps = (seg_times-kernel_times[kleft])/(kernel_times[kright]-kernel_times[kleft]+1e-100)
-            print(eps)
-            print('left',left_data.n_samples(),istart-left_istart,iend-left_istart)
+            #print(eps)
+            #print('left',left_data.n_samples(),istart-left_istart,iend-left_istart)
             left_seg_data = left_data.data[:,istart-left_istart:iend-left_istart]
-            print('right',right_data.n_samples(),0,iend-istart)
-            right_seg_data = right_data.data[:,:iend-istart]
-            print('shapes',left_seg_data.shape,right_seg_data.shape)
+            #print('right',right_data.n_samples(),0,iend-istart)
+            right_seg_data = right_data.data[:,:iend-istart] 
+            #print('shapes',left_seg_data.shape,right_seg_data.shape)
             seg_data = left_seg_data + (right_seg_data-left_seg_data)*eps
             output_data[:,istart:iend]=seg_data
 
@@ -377,8 +477,28 @@ class PiecewiseFilter(LinearFilter):
             left_istart=istart
 
         return TimeData(output_data, dt, output_t0, filter_set[0].output_names)
+        
+    def restrict(self, input_names=None, output_names=None):
+        '''
+        Return a restricted version of this filter applying only a subset of input or output channels.
+        
+        This returns a Piecewise Filter object with each subfilter replaced by a restricted version.
+        '''
+        
+        new = copy.copy(self)
 
+        new.subfilters=[filt.restrict(input_names=input_names, output_names=output_names) for filt in self.subfilters]
+        
+        new.n_input_channels=new.subfilters[0].n_input_channels
+        new.input_names=new.subfilters[0].input_names
+        new.n_output_channels=new.subfilters[0].n_output_channels
+        new.output_names=new.subfilters[0].output_names
+        nkern=len(new.subfilters)
+        new.kernel_compts=new.subfilters[nkern//2].kernel_compts
 
+        return new
+
+        
 class RestrictedFilter(LinearFilter):
     '''
     This class allows to generate a version of a linear filter which is restricted to a apply only to
@@ -406,7 +526,7 @@ class RestrictedFilter(LinearFilter):
                 count=np.sum(locs)==1
                 assert count, 'In restricting input channels, found "'+name+'" '+str(count)+' times.'
                 input_name_map.append(np.argmax(locs))
-            if 1:
+            if 0:
                 print('Input name mapping:')
                 for i in range(len(input_names)):
                     print(str(input_name_map[i])+':'+other.input_names[input_name_map[i]]+' --> '+str(i)+':'+input_names[i])
@@ -425,7 +545,7 @@ class RestrictedFilter(LinearFilter):
                 count=np.sum(locs)==1
                 assert count, 'In restricting output channels, found "'+name+'" '+str(count)+' times.'
                 output_name_map.append(np.argmax(locs))
-            if 1:
+            if 0:
                 print('Output name mapping:')
                 for i in range(len(output_names)):
                     print(str(output_name_map[i])+':'+other.output_names[output_name_map[i]]+' --> '+str(i)+':'+output_names[i])
@@ -441,6 +561,6 @@ class RestrictedFilter(LinearFilter):
             if input_name_map is not None: kernel_compts=kernel_compts[:,:,input_name_map]
             if output_name_map is not None: kernel_compts=kernel_compts[output_name_map,:,:]
             self.kernel_compts=kernel_compts
-            print('kernel_compts shape changed from',other.kernel_compts.shape,'to',self.kernel_compts)
+            #print('kernel_compts shape changed from',other.kernel_compts.shape,'to',self.kernel_compts)
             self.constant_kernel=other.constant_kernel
             self.dt=other.dt

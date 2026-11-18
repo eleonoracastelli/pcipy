@@ -145,7 +145,8 @@ if __name__ == "__main__":
     print('***************************************************************************')
 
     # Instantiate GW signal class
-    npix = hp.nside2npix(12)
+    npix = hp.nside2npix(4)#was 12
+    print('Will compute signal for',npix,'sky locations.')
     skymap = np.ones(npix) / np.sqrt(2 * npix)
     generator = white_generator(1)
 
